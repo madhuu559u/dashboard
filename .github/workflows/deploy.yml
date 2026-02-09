@@ -1,16 +1,13 @@
 name: Deploy to Azure
-
 on:
   push:
     branches:
       - main
-
 jobs:
   build_and_deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-
       - name: Build And Deploy
         uses: Azure/static-web-apps-deploy@v1
         with:
@@ -19,3 +16,5 @@ jobs:
           action: "upload"
           app_location: "/"
           output_location: "dist"
+        env:
+          VITE_OPENAI_KEY: ${{ secrets.VITE_OPENAI_KEY }}
