@@ -9,11 +9,12 @@ import {
    NEXUS v6 — World-Class Agentic Dashboard
    
    ARCHITECTURE CHANGE: Dynamic data computation
-   - AI now specifies WHAT data to compute + HOW to filter it
+   - GPT now specifies WHAT data to compute + HOW to filter it
    - App computes aggregations on-the-fly from raw orders
    - Supports any combination of filters/groupings
-   - Shows AI's raw response for debugging
+   - Shows GPT's raw response for debugging
    ═══════════════════════════════════════════════════════════════════ */
+
 const OPENAI_KEY = import.meta.env.VITE_OPENAI_KEY || "";
 
 const C = {
@@ -65,7 +66,7 @@ function buildOrders(products, carts, users) {
 }
 
 // ═══ DYNAMIC DATA ENGINE ═══
-// Given raw orders + a query spec from AI, compute the exact data needed
+// Given raw orders + a query spec from GPT, compute the exact data needed
 function computeData(orders, spec) {
   const { source, groupBy, metric, filters: f, sortBy, sortDir, limit } = spec;
   
@@ -208,7 +209,7 @@ function computeData(orders, spec) {
 
 // ═══ SYSTEM PROMPT ═══
 function buildPrompt(orders) {
-  // Send real statistics so AI knows the data
+  // Send real statistics so GPT knows the data
   const regions = [...new Set(orders.map(o=>o.region))];
   const channels = [...new Set(orders.map(o=>o.channel))];
   const statuses = [...new Set(orders.map(o=>o.status))];
@@ -302,7 +303,7 @@ async function callGPT(query, sysPrompt, onLog) {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${OPENAI_KEY}` },
         body: JSON.stringify({
-          model: "gpt-4o-mini-2024-07-18", temperature: 0.15, max_tokens: 3000,
+          model: "gpt-4o-mini", temperature: 0.15, max_tokens: 3000,
           messages: [{ role: "system", content: sysPrompt }, { role: "user", content: query }],
           response_format: { type: "json_object" }
         })
@@ -544,7 +545,7 @@ export default function Nexus() {
         const o = buildOrders(pr,ca,us);
         setOrders(o);
         setPhase("idle");
-        log(`🟢 ${o.length} orders ready — Next-Era AI active`,"ok");
+        log(`🟢 ${o.length} orders ready — GPT-4o-mini active`,"ok");
       } catch(e) {
         log("⚠️ "+e.message+" — using fallback","warn");
         const fp = Array.from({length:20},(_,i)=>({id:i+1,title:"Product "+(i+1),price:+(10+Math.random()*190).toFixed(2),category:["electronics","jewelery","mens clothing","womens clothing"][i%4]}));
@@ -560,7 +561,7 @@ export default function Nexus() {
     log(`🎯 "${q}"`,"voice");
     let res;
     try {
-      log("🧠 Next-Era AI analyzing...","api");
+      log("🧠 GPT-4o-mini analyzing...","api");
       const sysP = buildPrompt(orders);
       res = await callGPT(q, sysP, log);
       setGptRaw(JSON.stringify(res, null, 2));
@@ -617,9 +618,8 @@ export default function Nexus() {
   ];
 
   return (
-    <div style={{minHeight:"100vh",width:"100%",background:C.bg,color:C.tx,fontFamily:"'Space Grotesk',system-ui,sans-serif"}}>
+    <div style={{minHeight:"100vh",background:C.bg,color:C.tx,fontFamily:"'Space Grotesk',system-ui,sans-serif"}}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap');
-html,body,#root{width:100%;min-height:100vh;margin:0;padding:0;background:${C.bg}}
 @keyframes rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
 @keyframes pulse{from{height:4px}to{height:18px}}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -633,8 +633,8 @@ input::placeholder{color:${C.dm}}
         <div style={{maxWidth:1400,margin:"0 auto",padding:"12px 24px"}}>
           <div style={{display:"flex",alignItems:"center",gap:12}}>
             <div style={{display:"flex",alignItems:"center",gap:9,flexShrink:0}}>
-              <div style={{width:34,height:34,borderRadius:9,background:"linear-gradient(135deg,#0176D3,#1B96FF)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:15,fontWeight:700,color:"#fff"}}>N</div>
-              <div><div style={{fontSize:14,fontWeight:700,letterSpacing:-.3}}>Next-Era AI</div><div style={{fontSize:8,color:C.dm,letterSpacing:1,textTransform:"uppercase"}}>Next-Era AI Agent</div></div>
+              <div style={{width:34,height:34,borderRadius:9,background:`linear-gradient(135deg,${C.ac},${C.pr})`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:15,fontWeight:700,color:"#fff"}}>N</div>
+              <div><div style={{fontSize:14,fontWeight:700,letterSpacing:-.3}}>NEXUS</div><div style={{fontSize:8,color:C.dm,letterSpacing:1,textTransform:"uppercase"}}>GPT-4o-mini Agent</div></div>
             </div>
             <form onSubmit={e=>{e.preventDefault();run(query);}} style={{flex:1,display:"flex",gap:7}}>
               <div style={{flex:1,display:"flex",alignItems:"center",background:C.sf,border:`1px solid ${listening?C.rd+"80":C.bd}`,borderRadius:11,padding:"0 14px",minHeight:42,animation:listening?"glow 2s infinite":"none"}}>
@@ -644,18 +644,18 @@ input::placeholder{color:${C.dm}}
                 {query&&<button type="button" onClick={()=>{setQuery("");inRef.current?.focus();}} style={{background:"none",border:"none",color:C.dm,cursor:"pointer",fontSize:14}}>✕</button>}
               </div>
               <button type="button" onClick={mic} style={{width:42,height:42,borderRadius:10,border:`1px solid ${listening?C.rd:C.bd}`,background:listening?C.rd+"15":C.sf,color:listening?C.rd:C.mt,cursor:"pointer",fontSize:16,flexShrink:0}}>🎙️</button>
-              <button type="submit" disabled={phase==="think"} style={{padding:"0 20px",height:42,borderRadius:10,border:"none",background:"linear-gradient(135deg,#0176D3,#1B96FF)",color:"#fff",fontWeight:600,fontSize:13,cursor:"pointer",fontFamily:"inherit",flexShrink:0,opacity:phase==="think"?.6:1}}>
+              <button type="submit" disabled={phase==="think"} style={{padding:"0 20px",height:42,borderRadius:10,border:"none",background:`linear-gradient(135deg,${C.ac},${C.pr})`,color:"#fff",fontWeight:600,fontSize:13,cursor:"pointer",fontFamily:"inherit",flexShrink:0,opacity:phase==="think"?.6:1}}>
                 {phase==="think"?"⏳ Thinking...":"Run ▸"}
               </button>
               <button type="button" onClick={()=>setShowLog(!showLog)} style={{width:42,height:42,borderRadius:10,border:`1px solid ${C.bd}`,background:C.sf,color:C.dm,cursor:"pointer",fontSize:13,flexShrink:0}} title="Agent Log">📋</button>
-              {gptRaw&&<button type="button" onClick={()=>setShowRaw(!showRaw)} style={{width:42,height:42,borderRadius:10,border:`1px solid ${C.bd}`,background:C.sf,color:showRaw?C.ac:C.dm,cursor:"pointer",fontSize:13,flexShrink:0}} title="AI Response">🔍</button>}
+              {gptRaw&&<button type="button" onClick={()=>setShowRaw(!showRaw)} style={{width:42,height:42,borderRadius:10,border:`1px solid ${C.bd}`,background:C.sf,color:showRaw?C.ac:C.dm,cursor:"pointer",fontSize:13,flexShrink:0}} title="GPT Response">🔍</button>}
             </form>
           </div>
           {showLog&&<div style={{marginTop:8,padding:"8px 12px",background:C.sf,borderRadius:8,border:`1px solid ${C.bd}`,maxHeight:110,overflowY:"auto",animation:"rise .2s ease"}}>
             {logs.map((l,i)=><div key={i} style={{fontSize:10,color:l.t==="ok"?C.gn:l.t==="warn"?C.am:l.t==="voice"?C.rd:l.t==="api"?C.cy:C.mt,marginBottom:2}}><span style={{color:C.dm,marginRight:4}}>{l.ts}</span>{l.m}</div>)}
           </div>}
           {showRaw&&gptRaw&&<div style={{marginTop:8,padding:"8px 12px",background:C.sf,borderRadius:8,border:`1px solid ${C.bd}`,maxHeight:200,overflowY:"auto",animation:"rise .2s ease"}}>
-            <div style={{fontSize:9,color:C.mt,marginBottom:4,fontWeight:600}}>AI Raw Response:</div>
+            <div style={{fontSize:9,color:C.mt,marginBottom:4,fontWeight:600}}>GPT-4o-mini Raw Response:</div>
             <pre style={{fontSize:10,color:C.tx2,whiteSpace:"pre-wrap",wordBreak:"break-all",fontFamily:"monospace",lineHeight:1.4}}>{gptRaw}</pre>
           </div>}
           <div style={{marginTop:8,display:"flex",gap:4,flexWrap:"wrap",alignItems:"center"}}>
@@ -676,12 +676,12 @@ input::placeholder{color:${C.dm}}
       <main style={{maxWidth:1400,margin:"0 auto",padding:"20px 24px"}}>
         {phase==="boot"&&<div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:"70vh"}}><div style={{width:44,height:44,border:`3px solid ${C.bd}`,borderTopColor:C.ac,borderRadius:"50%",animation:"spin 1s linear infinite",marginBottom:16}}/><div style={{fontSize:15,fontWeight:600}}>Connecting to FakeStoreAPI...</div></div>}
         
-        {phase==="think"&&<div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:"70vh",animation:"rise .3s ease"}}><div style={{width:44,height:44,border:`3px solid ${C.bd}`,borderTopColor:C.pr,borderRadius:"50%",animation:"spin .8s linear infinite",marginBottom:16}}/><div style={{fontSize:15,fontWeight:600}}>Next-Era AI building your dashboard...</div><div style={{fontSize:12,color:C.mt,marginTop:6}}>"{lastQ}"</div></div>}
+        {phase==="think"&&<div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:"70vh",animation:"rise .3s ease"}}><div style={{width:44,height:44,border:`3px solid ${C.bd}`,borderTopColor:C.pr,borderRadius:"50%",animation:"spin .8s linear infinite",marginBottom:16}}/><div style={{fontSize:15,fontWeight:600}}>GPT-4o-mini building your dashboard...</div><div style={{fontSize:12,color:C.mt,marginTop:6}}>"{lastQ}"</div></div>}
 
         {phase==="idle"&&!spec&&orders&&<div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:"70vh",animation:"rise .5s ease"}}>
           <div style={{fontSize:48,marginBottom:14}}>🎯</div>
-          <div style={{fontSize:24,fontWeight:700,background:"linear-gradient(135deg,#0176D3,#1B96FF)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>What would you like to see?</div>
-          <div style={{fontSize:13,color:C.mt,maxWidth:520,textAlign:"center",lineHeight:1.7,margin:"10px 0 24px"}}>Ask complex questions. Next-Era AI understands filters, comparisons, rankings, and builds unique dashboards with real computed data.</div>
+          <div style={{fontSize:24,fontWeight:700,background:`linear-gradient(135deg,${C.ac},${C.pr})`,WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>What would you like to see?</div>
+          <div style={{fontSize:13,color:C.mt,maxWidth:520,textAlign:"center",lineHeight:1.7,margin:"10px 0 24px"}}>Ask complex questions. GPT-4o-mini understands filters, comparisons, rankings, and builds unique dashboards with real computed data.</div>
           <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:8,maxWidth:560}}>
             {["Which channel and region has the highest returns?","Show pie chart of order status for Europe only","Pending orders with wait times sorted by longest waiting","Compare cancelled vs returned by region and channel","Revenue trend with monthly cancellation rates","Top 5 products in electronics category"].map(s=><div key={s} onClick={()=>{setQuery(s);run(s);}} style={{padding:"12px 14px",borderRadius:10,border:`1px solid ${C.bd}`,background:C.sf,fontSize:11,color:C.mt,cursor:"pointer",lineHeight:1.4,transition:"all .2s"}} onMouseEnter={e=>{e.currentTarget.style.borderColor=C.ac;e.currentTarget.style.color=C.tx;}} onMouseLeave={e=>{e.currentTarget.style.borderColor=C.bd;e.currentTarget.style.color=C.mt;}}>"{s}"</div>)}
           </div>
@@ -694,7 +694,7 @@ input::placeholder{color:${C.dm}}
               {spec.insight&&<p style={{fontSize:12,color:C.mt,marginTop:4}}>🤖 {spec.insight}</p>}
               <p style={{fontSize:10,color:C.dm,marginTop:3}}>Query: "{lastQ}"</p>
             </div>
-            <span style={{fontSize:10,color:C.gn,padding:"4px 10px",background:C.sf,borderRadius:7,border:`1px solid ${C.bd}`,flexShrink:0}}>Next-Era AI · {spec.widgets?.length} widgets</span>
+            <span style={{fontSize:10,color:C.gn,padding:"4px 10px",background:C.sf,borderRadius:7,border:`1px solid ${C.bd}`,flexShrink:0}}>GPT-4o-mini · {spec.widgets?.length} widgets</span>
           </div>
           <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:14}}>
             {(spec.widgets||[]).map((w,i)=><Widget key={lastQ+"_"+i} spec={w} orders={orders} delay={i*50} uiFilters={filters}/>)}
