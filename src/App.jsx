@@ -16,9 +16,8 @@ import {
    - Supports any combination of filters/groupings
    - Shows AI's raw response for debugging
    ═══════════════════════════════════════════════════════════════════ */
-//const OPENAI_KEY = import.meta.env.VITE_OPENAI_KEY || "";
+const OPENAI_KEY = import.meta.env.VITE_OPENAI_KEY || "";
 
-const OPENAI_KEY = "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"
 
 const C = {
   bg: "#04060C", bg2: "#080D18", sf: "#0C1322", sf2: "#101B2E",
