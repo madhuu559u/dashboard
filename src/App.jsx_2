@@ -1,0 +1,678 @@
+import { useState, useEffect, useRef, useCallback } from "react";
+import {
+  AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
+  RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
+  ResponsiveContainer, Legend, ComposedChart
+} from "recharts";
+
+/* ═══════════════════════════════════════════════════════════════════
+   NEXUS — Agentic Order Intelligence Dashboard
+   
+   HOW IT WORKS:
+   1. Loads REAL data from FakeStoreAPI (products/carts/users)
+   2. Enriches with 200 simulated orders
+   3. User speaks or types a command
+   4. Command sent to OpenAI GPT-4o-mini → returns JSON dashboard spec
+   5. Dynamic renderer builds layout from spec (no hardcoded dashboards)
+   6. Filters apply in real-time on the fly
+   
+   TO RUN: Paste your OpenAI API key in the input at top-left
+   ═══════════════════════════════════════════════════════════════════ */
+
+// ─── DESIGN TOKENS ───
+const K = {
+  bg: "#04070D", sf: "#0A1120", sa: "#0F1729", bd: "#1A2744",
+  bh: "#263A5E", tx: "#E1E7F0", mt: "#7E8FA6", dm: "#465770",
+  ac: "#2F7CF6", pr: "#7C3AED", gn: "#0FBE7B", am: "#EAA020",
+  rd: "#E8453C", cy: "#08B5D0", pk: "#D946A8",
+};
+const PAL = ["#2F7CF6","#7C3AED","#0FBE7B","#EAA020","#E8453C","#08B5D0","#D946A8","#5B61F1","#14B8A6","#F97316"];
+const fmtUsd = n => { if (n == null) return "—"; const a = Math.abs(n); if (a >= 1e9) return "$" + (n/1e9).toFixed(1) + "B"; if (a >= 1e6) return "$" + (n/1e6).toFixed(1) + "M"; if (a >= 1e3) return "$" + (n/1e3).toFixed(1) + "K"; return "$" + Number(n).toFixed(2); };
+const fmtN = n => { if (n == null) return "—"; if (Math.abs(n) >= 1e6) return (n/1e6).toFixed(1) + "M"; if (Math.abs(n) >= 1e3) return (n/1e3).toFixed(1) + "K"; return String(n); };
+
+// ─── REST API SOURCES ───
+const APIS = {
+  products: "https://fakestoreapi.com/products",
+  carts: "https://fakestoreapi.com/carts",
+  users: "https://fakestoreapi.com/users",
+};
+
+// ─── DATA ENRICHMENT ENGINE ───
+// Takes raw API data → generates 200 realistic orders with business metrics
+function buildOrderData(products, carts, users) {
+  const STATUSES = ["Delivered","Shipped","Processing","Pending","Cancelled","Returned"];
+  const REGIONS = ["North America","Europe","Asia Pacific","Latin America","Middle East"];
+  const CHANNELS = ["Web Store","Mobile App","Marketplace","Wholesale","In-Store"];
+  const now = Date.now();
+  const orders = [];
+
+  for (let i = 1; i <= 200; i++) {
+    const nItems = 1 + Math.floor(Math.random() * 4);
+    const items = []; let total = 0;
+    for (let j = 0; j < nItems; j++) {
+      const p = products[Math.floor(Math.random() * products.length)];
+      const qty = 1 + Math.floor(Math.random() * 5);
+      items.push({ productId: p.id, title: p.title, price: p.price, quantity: qty, category: p.category });
+      total += p.price * qty;
+    }
+    const daysAgo = Math.floor(Math.random() * 365);
+    const dt = new Date(now - daysAgo * 864e5);
+    const st = STATUSES[Math.floor(Math.random() * STATUSES.length)];
+    orders.push({
+      id: 1000 + i,
+      userId: 1 + Math.floor(Math.random() * users.length),
+      items, total: Math.round(total * 100) / 100, status: st,
+      region: REGIONS[Math.floor(Math.random() * REGIONS.length)],
+      channel: CHANNELS[Math.floor(Math.random() * CHANNELS.length)],
+      date: dt.toISOString(),
+      month: dt.toLocaleDateString("en", { month: "short", year: "2-digit" }),
+      dayOfWeek: dt.toLocaleDateString("en", { weekday: "short" }),
+      priority: Math.random() > .7 ? "High" : Math.random() > .4 ? "Medium" : "Low",
+      discount: Math.random() > .6 ? Math.round(Math.random() * 25) : 0,
+    });
+  }
+
+  // Aggregations
+  const byStatus = {}; STATUSES.forEach(s => byStatus[s] = 0);
+  const byRegion = {}; REGIONS.forEach(r => byRegion[r] = { count: 0, revenue: 0 });
+  const byChannel = {}; CHANNELS.forEach(c => byChannel[c] = { count: 0, revenue: 0 });
+  const byCat = {}; const byMonth = {};
+  let totRev = 0, totItems = 0;
+
+  orders.forEach(o => {
+    byStatus[o.status]++;
+    byRegion[o.region].count++; byRegion[o.region].revenue += o.total;
+    byChannel[o.channel].count++; byChannel[o.channel].revenue += o.total;
+    o.items.forEach(it => {
+      const cat = (it.category || "Other").replace(/'/g, "");
+      if (!byCat[cat]) byCat[cat] = { count: 0, revenue: 0, qty: 0 };
+      byCat[cat].count++; byCat[cat].revenue += it.price * it.quantity; byCat[cat].qty += it.quantity;
+      totItems += it.quantity;
+    });
+    if (!byMonth[o.month]) byMonth[o.month] = { month: o.month, orders: 0, revenue: 0, dt: o.date };
+    byMonth[o.month].orders++; byMonth[o.month].revenue += o.total;
+    totRev += o.total;
+  });
+  Object.values(byMonth).forEach(m => { m.avgValue = Math.round(m.revenue / m.orders * 100) / 100; m.revenue = Math.round(m.revenue); });
+
+  const monthly = Object.values(byMonth).sort((a, b) => new Date(a.dt) - new Date(b.dt)).slice(-12);
+  const topProds = products.map(p => {
+    const ords = orders.filter(o => o.items.some(it => it.productId === p.id));
+    return { ...p, ordCnt: ords.length, rev: Math.round(ords.reduce((s, o) => s + o.items.filter(it => it.productId === p.id).reduce((ss, it) => ss + it.price * it.quantity, 0), 0)) };
+  }).sort((a, b) => b.rev - a.rev).slice(0, 10);
+
+  return {
+    orders, products, users,
+    summary: { totalOrders: orders.length, totalRevenue: Math.round(totRev), avgOrderValue: Math.round(totRev / orders.length * 100) / 100, totalItems: totItems, uniqueCustomers: new Set(orders.map(o => o.userId)).size },
+    byStatus: Object.entries(byStatus).map(([k, v]) => ({ name: k, value: v })),
+    byRegion: Object.entries(byRegion).map(([k, v]) => ({ name: k, ...v, revenue: Math.round(v.revenue) })),
+    byChannel: Object.entries(byChannel).map(([k, v]) => ({ name: k, ...v, revenue: Math.round(v.revenue) })),
+    byCategory: Object.entries(byCat).map(([k, v]) => ({ name: k.substring(0, 14), ...v, revenue: Math.round(v.revenue) })),
+    monthlyTrend: monthly,
+    recentOrders: [...orders].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 30),
+    topProducts: topProds,
+    dayOfWeek: ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].map(d => ({ day: d, orders: orders.filter(o => o.dayOfWeek.startsWith(d.substring(0, 2))).length })),
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// AGENTIC LAYER — OpenAI GPT-4o-mini decides what dashboard to build
+// ═══════════════════════════════════════════════════════════════════
+const SYSTEM_PROMPT = `You are an AI dashboard architect. Given a user's question about order/ecommerce data, return a JSON dashboard specification.
+
+Available data keys: summary, byStatus, byRegion, byChannel, byCategory, monthlyTrend, recentOrders, topProducts, dayOfWeek
+
+RESPOND WITH ONLY RAW JSON. No markdown. No backticks. No explanation.
+
+Schema:
+{
+  "title": "string",
+  "insight": "one-sentence AI insight",
+  "widgets": [
+    {
+      "type": "kpi|bar|pie|area|line|table|composed",
+      "title": "string",
+      "dataKey": "one of the available data keys above",
+      "span": 1 or 2,
+      "config": {}
+    }
+  ],
+  "filters": [{"field":"status|region|channel|category|priority","label":"string"}],
+  "layout": "grid-2"
+}
+
+Config by type:
+- kpi: {"metrics":[{"label":"str","valueKey":"totalOrders|totalRevenue|avgOrderValue|totalItems|uniqueCustomers","icon":"emoji","color":"#hex","format":"currency|number"}]}
+- bar: {"xKey":"str","yKeys":[{"key":"str","color":"#hex","name":"str"}],"layout":"horizontal|vertical"}
+- area/line: {"xKey":"str","yKeys":[{"key":"str","color":"#hex","name":"str"}]}
+- pie: {"nameKey":"str","valueKey":"str"}
+- table: {"columns":[{"key":"str","label":"str","align":"left|right","format":"currency|number|status|text"}],"limit":number}
+- composed: {"xKey":"str","bars":[{"key":"str","color":"#hex","name":"str"}],"lines":[...],"areas":[...]}
+
+Rules:
+1. ALWAYS start with 3-5 KPI cards using dataKey "summary"
+2. 5-10 widgets total
+3. Match user intent: "issues"→focus Cancelled/Returned, "revenue"→financial charts, "trends"→time series, "region"→geographic, "products"→product tables
+4. For tables with recentOrders use columns: id, status, total, region, channel, priority
+5. For topProducts tables use: title, category, price, rev, ordCnt
+6. Use span:2 for wide charts (area, composed, tables)
+7. Always include at least 2 different chart types
+8. For byRegion/byChannel/byCategory bars, use count or revenue as yKey
+9. For monthlyTrend, xKey is "month", yKeys can be "orders","revenue","avgValue"`;
+
+async function callAgent(query, dataSummary, apiKey) {
+  try {
+    const resp = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        temperature: 0.3,
+        max_tokens: 1500,
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          { role: "user", content: `Query: "${query}"\n\nData summary: ${JSON.stringify(dataSummary)}` }
+        ],
+        response_format: { type: "json_object" }
+      })
+    });
+    if (!resp.ok) { const err = await resp.json().catch(() => ({})); throw new Error(err.error?.message || `HTTP ${resp.status}`); }
+    const data = await resp.json();
+    const text = data.choices?.[0]?.message?.content || "";
+    return JSON.parse(text.replace(/```json|```/g, "").trim());
+  } catch (e) {
+    console.warn("OpenAI error:", e.message);
+    throw e;
+  }
+}
+
+// ─── LOCAL FALLBACK (when no API key) ───
+function localAgent(query) {
+  const l = query.toLowerCase();
+  const w = []; let p = 10;
+  // KPIs always
+  w.push({ type: "kpi", title: "Key Metrics", dataKey: "summary", span: 2, priority: p--, config: { metrics: [
+    { label: "Total Orders", valueKey: "totalOrders", icon: "📦", color: "#2F7CF6", format: "number" },
+    { label: "Revenue", valueKey: "totalRevenue", icon: "💰", color: "#0FBE7B", format: "currency" },
+    { label: "Avg Order", valueKey: "avgOrderValue", icon: "📊", color: "#7C3AED", format: "currency" },
+    { label: "Customers", valueKey: "uniqueCustomers", icon: "👥", color: "#EAA020", format: "number" },
+  ]}});
+
+  const isRev = /revenue|sales|money|financ/i.test(l);
+  const isIss = /issue|problem|cancel|return|fail|error/i.test(l);
+  const isTrend = /trend|time|month|growth|history/i.test(l);
+  const isRegion = /region|geo|where|location|country/i.test(l);
+  const isProd = /product|item|top|best|perform/i.test(l);
+  const isChan = /channel|source|how|platform/i.test(l);
+
+  if (isIss) {
+    w.push({ type: "pie", title: "Status Breakdown", dataKey: "byStatus", span: 1, config: { nameKey: "name", valueKey: "value" } });
+    w.push({ type: "bar", title: "Issues by Region", dataKey: "byRegion", span: 1, config: { xKey: "name", yKeys: [{ key: "count", color: "#E8453C", name: "Orders" }] } });
+    w.push({ type: "table", title: "Problem Orders", dataKey: "recentOrders", span: 2, config: { columns: [{ key: "id", label: "#" }, { key: "status", label: "Status", format: "status" }, { key: "total", label: "Total", format: "currency", align: "right" }, { key: "region", label: "Region" }, { key: "priority", label: "Priority", format: "status" }], limit: 15 } });
+  } else if (isRev) {
+    w.push({ type: "area", title: "Revenue Trend", dataKey: "monthlyTrend", span: 2, config: { xKey: "month", yKeys: [{ key: "revenue", color: "#0FBE7B", name: "Revenue" }] } });
+    w.push({ type: "bar", title: "Revenue by Category", dataKey: "byCategory", span: 1, config: { xKey: "name", yKeys: [{ key: "revenue", color: "#7C3AED", name: "Revenue" }] } });
+    w.push({ type: "pie", title: "Revenue by Channel", dataKey: "byChannel", span: 1, config: { nameKey: "name", valueKey: "revenue" } });
+    w.push({ type: "table", title: "Top Products", dataKey: "topProducts", span: 2, config: { columns: [{ key: "title", label: "Product" }, { key: "price", label: "Price", format: "currency", align: "right" }, { key: "rev", label: "Revenue", format: "currency", align: "right" }, { key: "ordCnt", label: "Orders", align: "right" }], limit: 10 } });
+  } else if (isTrend) {
+    w.push({ type: "composed", title: "Monthly Orders & Revenue", dataKey: "monthlyTrend", span: 2, config: { xKey: "month", bars: [{ key: "orders", color: "#2F7CF680", name: "Orders" }], lines: [{ key: "avgValue", color: "#EAA020", name: "Avg Value" }], areas: [{ key: "revenue", color: "#0FBE7B", name: "Revenue" }] } });
+    w.push({ type: "bar", title: "Orders by Day", dataKey: "dayOfWeek", span: 1, config: { xKey: "day", yKeys: [{ key: "orders", color: "#08B5D0", name: "Orders" }] } });
+    w.push({ type: "pie", title: "Status Distribution", dataKey: "byStatus", span: 1, config: { nameKey: "name", valueKey: "value" } });
+  } else if (isRegion) {
+    w.push({ type: "bar", title: "Orders by Region", dataKey: "byRegion", span: 1, config: { xKey: "name", yKeys: [{ key: "count", color: "#2F7CF6", name: "Orders" }, { key: "revenue", color: "#0FBE7B", name: "Revenue" }] } });
+    w.push({ type: "pie", title: "Revenue by Region", dataKey: "byRegion", span: 1, config: { nameKey: "name", valueKey: "revenue" } });
+  } else if (isProd) {
+    w.push({ type: "bar", title: "Top Products", dataKey: "topProducts", span: 2, config: { xKey: "title", yKeys: [{ key: "rev", color: "#0FBE7B", name: "Revenue" }], layout: "vertical" } });
+    w.push({ type: "pie", title: "Category Mix", dataKey: "byCategory", span: 1, config: { nameKey: "name", valueKey: "qty" } });
+  } else if (isChan) {
+    w.push({ type: "bar", title: "Channel Performance", dataKey: "byChannel", span: 1, config: { xKey: "name", yKeys: [{ key: "count", color: "#2F7CF6", name: "Orders" }, { key: "revenue", color: "#0FBE7B", name: "Revenue" }] } });
+    w.push({ type: "pie", title: "Channel Share", dataKey: "byChannel", span: 1, config: { nameKey: "name", valueKey: "count" } });
+  } else {
+    w.push({ type: "pie", title: "Order Status", dataKey: "byStatus", span: 1, config: { nameKey: "name", valueKey: "value" } });
+    w.push({ type: "area", title: "Revenue Trend", dataKey: "monthlyTrend", span: 2, config: { xKey: "month", yKeys: [{ key: "revenue", color: "#0FBE7B", name: "Revenue" }] } });
+    w.push({ type: "bar", title: "By Region", dataKey: "byRegion", span: 1, config: { xKey: "name", yKeys: [{ key: "count", color: "#2F7CF6", name: "Orders" }] } });
+    w.push({ type: "pie", title: "By Channel", dataKey: "byChannel", span: 1, config: { nameKey: "name", valueKey: "count" } });
+    w.push({ type: "table", title: "Recent Orders", dataKey: "recentOrders", span: 2, config: { columns: [{ key: "id", label: "#" }, { key: "status", label: "Status", format: "status" }, { key: "total", label: "Total", format: "currency", align: "right" }, { key: "region", label: "Region" }, { key: "channel", label: "Channel" }], limit: 10 } });
+  }
+  const title = isIss ? "Order Issues Analysis" : isRev ? "Revenue Dashboard" : isTrend ? "Trend Analysis" : isRegion ? "Regional Breakdown" : isProd ? "Product Performance" : isChan ? "Channel Analysis" : "Order Overview";
+  return { title, insight: `Showing ${w.length} widgets based on your query`, widgets: w, filters: [{ field: "status", label: "Status" }, { field: "region", label: "Region" }, { field: "channel", label: "Channel" }], layout: "grid-2" };
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// DYNAMIC WIDGET RENDERER
+// ═══════════════════════════════════════════════════════════════════
+const Tip = ({ active, payload, label }) => {
+  if (!active || !payload?.length) return null;
+  return (<div style={{ background: "#111827", border: "1px solid #374151", borderRadius: 10, padding: "8px 12px", fontSize: 11, zIndex: 999 }}>
+    <div style={{ color: "#9CA3AF", marginBottom: 3 }}>{label}</div>
+    {payload.map((p, i) => (<div key={i} style={{ color: p.color || "#E5E7EB", display: "flex", gap: 6, alignItems: "center" }}>
+      <span style={{ width: 6, height: 6, borderRadius: "50%", background: p.color, display: "inline-block" }} />
+      <span>{p.name}: <b>{typeof p.value === "number" ? (p.value >= 1000 ? fmtN(p.value) : p.value.toLocaleString()) : p.value}</b></span>
+    </div>))}
+  </div>);
+};
+
+function DynWidget({ spec, allData, delay = 0, filters }) {
+  let d = allData[spec.dataKey];
+  if (!d) d = spec.dataKey === "summary" ? allData.summary : null;
+  if (!d) return null;
+
+  // Apply filters on recentOrders
+  if (Array.isArray(d) && spec.dataKey === "recentOrders" && filters) {
+    Object.entries(filters).forEach(([fld, vals]) => {
+      if (vals?.length) d = d.filter(r => vals.includes(r[fld]));
+    });
+  }
+
+  const box = (children, sp) => (
+    <div style={{ background: K.sf, border: `1px solid ${K.bd}`, borderRadius: 16, padding: 20, animation: `slideUp .5s ease ${delay}ms both`, gridColumn: (sp || spec.span || 1) > 1 ? "1 / -1" : undefined, transition: "border-color .2s, box-shadow .2s", minHeight: spec.type === "kpi" ? "auto" : 310 }}
+      onMouseEnter={e => { e.currentTarget.style.borderColor = K.bh; e.currentTarget.style.boxShadow = "0 4px 30px #0006"; }}
+      onMouseLeave={e => { e.currentTarget.style.borderColor = K.bd; e.currentTarget.style.boxShadow = "none"; }}>
+      {spec.type !== "kpi" && <div style={{ marginBottom: 14 }}><div style={{ fontSize: 13, fontWeight: 600, color: K.tx }}>{spec.title}</div></div>}
+      {children}
+    </div>
+  );
+
+  const cfg = spec.config || {};
+
+  if (spec.type === "kpi") {
+    return box(
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(155px, 1fr))", gap: 12 }}>
+        {(cfg.metrics || []).map((m, i) => {
+          const val = d?.[m.valueKey];
+          const display = m.format === "currency" ? fmtUsd(val) : fmtN(val);
+          return (<div key={i} style={{ background: K.sa, border: `1px solid ${K.bd}`, borderRadius: 14, padding: "16px 18px", position: "relative", overflow: "hidden", animation: `slideUp .4s ease ${delay + i * 70}ms both` }}>
+            <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(90deg, ${m.color || K.ac}, transparent)` }} />
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+              <div>
+                <div style={{ fontSize: 10, color: K.mt, letterSpacing: .8, textTransform: "uppercase", marginBottom: 5 }}>{m.label}</div>
+                <div style={{ fontSize: 24, fontWeight: 700, color: K.tx, letterSpacing: -.5 }}>{display}</div>
+              </div>
+              <span style={{ fontSize: 20 }}>{m.icon || "📊"}</span>
+            </div>
+          </div>);
+        })}
+      </div>, 2);
+  }
+
+  if (spec.type === "bar") {
+    const vert = cfg.layout === "vertical";
+    return box(<div style={{ height: 260 }}><ResponsiveContainer>
+      <BarChart data={d} layout={vert ? "vertical" : "horizontal"} margin={vert ? { left: 70 } : { bottom: 10 }}>
+        <CartesianGrid strokeDasharray="3 3" stroke={K.bd} />
+        {vert ? <><XAxis type="number" stroke={K.dm} fontSize={10} tickFormatter={v => v >= 1000 ? fmtN(v) : v} /><YAxis dataKey={cfg.xKey || "name"} type="category" stroke={K.dm} fontSize={9} width={65} /></> :
+          <><XAxis dataKey={cfg.xKey || "name"} stroke={K.dm} fontSize={9} angle={-15} textAnchor="end" height={45} /><YAxis stroke={K.dm} fontSize={10} tickFormatter={v => v >= 1000 ? fmtN(v) : v} /></>}
+        <Tooltip content={<Tip />} />
+        {(cfg.yKeys || []).map((y, i) => <Bar key={i} dataKey={y.key} fill={y.color || PAL[i]} radius={vert ? [0, 4, 4, 0] : [4, 4, 0, 0]} name={y.name || y.key} />)}
+        {(cfg.yKeys || []).length > 1 && <Legend />}
+      </BarChart>
+    </ResponsiveContainer></div>);
+  }
+
+  if (spec.type === "area") {
+    return box(<div style={{ height: 260 }}><ResponsiveContainer>
+      <AreaChart data={d}>
+        <defs>{(cfg.yKeys || []).map((y, i) => <linearGradient key={i} id={`ag${delay}${i}`} x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor={y.color || PAL[i]} stopOpacity={.3} /><stop offset="95%" stopColor={y.color || PAL[i]} stopOpacity={0} /></linearGradient>)}</defs>
+        <CartesianGrid strokeDasharray="3 3" stroke={K.bd} /><XAxis dataKey={cfg.xKey} stroke={K.dm} fontSize={10} /><YAxis stroke={K.dm} fontSize={10} tickFormatter={v => v >= 1000 ? fmtN(v) : v} /><Tooltip content={<Tip />} />
+        {(cfg.yKeys || []).map((y, i) => <Area key={i} type="monotone" dataKey={y.key} stroke={y.color || PAL[i]} fill={`url(#ag${delay}${i})`} strokeWidth={2} name={y.name || y.key} />)}
+        {(cfg.yKeys || []).length > 1 && <Legend />}
+      </AreaChart>
+    </ResponsiveContainer></div>);
+  }
+
+  if (spec.type === "line") {
+    return box(<div style={{ height: 260 }}><ResponsiveContainer>
+      <LineChart data={d}>
+        <CartesianGrid strokeDasharray="3 3" stroke={K.bd} /><XAxis dataKey={cfg.xKey} stroke={K.dm} fontSize={10} /><YAxis stroke={K.dm} fontSize={10} /><Tooltip content={<Tip />} />
+        {(cfg.yKeys || []).map((y, i) => <Line key={i} type="monotone" dataKey={y.key} stroke={y.color || PAL[i]} strokeWidth={2} dot={false} name={y.name || y.key} />)}
+        <Legend />
+      </LineChart>
+    </ResponsiveContainer></div>);
+  }
+
+  if (spec.type === "pie") {
+    return box(<div style={{ height: 260 }}><ResponsiveContainer>
+      <PieChart><Pie data={d} dataKey={cfg.valueKey || "value"} nameKey={cfg.nameKey || "name"} cx="50%" cy="50%" outerRadius={95} innerRadius={42} paddingAngle={2} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} fontSize={10}>
+        {d.map((_, i) => <Cell key={i} fill={PAL[i % PAL.length]} />)}</Pie>
+        <Tooltip content={<Tip />} />
+      </PieChart>
+    </ResponsiveContainer></div>);
+  }
+
+  if (spec.type === "composed") {
+    return box(<div style={{ height: 260 }}><ResponsiveContainer>
+      <ComposedChart data={d}>
+        <CartesianGrid strokeDasharray="3 3" stroke={K.bd} /><XAxis dataKey={cfg.xKey} stroke={K.dm} fontSize={10} /><YAxis stroke={K.dm} fontSize={10} tickFormatter={v => v >= 1000 ? fmtN(v) : v} /><Tooltip content={<Tip />} />
+        {(cfg.areas || []).map((a, i) => <Area key={"a" + i} type="monotone" dataKey={a.key} fill={(a.color || PAL[i]) + "30"} stroke={a.color || PAL[i]} strokeWidth={2} name={a.name} />)}
+        {(cfg.bars || []).map((b, i) => <Bar key={"b" + i} dataKey={b.key} fill={b.color || PAL[i + 2]} radius={[4, 4, 0, 0]} name={b.name} />)}
+        {(cfg.lines || []).map((ln, i) => <Line key={"l" + i} type="monotone" dataKey={ln.key} stroke={ln.color || PAL[i + 4]} strokeWidth={2} dot={false} name={ln.name} />)}
+        <Legend />
+      </ComposedChart>
+    </ResponsiveContainer></div>, 2);
+  }
+
+  if (spec.type === "table") {
+    const cols = cfg.columns || []; const lim = cfg.limit || 10;
+    const rows = Array.isArray(d) ? d.slice(0, lim) : [];
+    return box(<div style={{ maxHeight: 320, overflowY: "auto", borderRadius: 10, border: `1px solid ${K.bd}` }}>
+      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
+        <thead><tr style={{ background: K.sa, position: "sticky", top: 0, zIndex: 1 }}>
+          {cols.map(c => <th key={c.key} style={{ padding: "8px 10px", textAlign: c.align || "left", color: K.mt, fontWeight: 600, fontSize: 10, textTransform: "uppercase", letterSpacing: .5, borderBottom: `1px solid ${K.bd}` }}>{c.label}</th>)}
+        </tr></thead>
+        <tbody>{rows.map((row, ri) => (<tr key={ri} style={{ borderBottom: `1px solid ${K.bd}08` }} onMouseEnter={e => e.currentTarget.style.background = K.sa} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+          {cols.map(c => {
+            let v = row[c.key]; const st = { padding: "8px 10px", textAlign: c.align || "left", color: K.tx };
+            if (c.format === "currency" && typeof v === "number") v = "$" + v.toFixed(2);
+            if (c.format === "status") {
+              const colors = { Delivered: K.gn, Shipped: K.ac, Processing: K.am, Pending: K.mt, Cancelled: K.rd, Returned: K.pk, High: K.rd, Medium: K.am, Low: K.gn };
+              return <td key={c.key} style={st}><span style={{ padding: "2px 8px", borderRadius: 6, fontSize: 10, fontWeight: 600, background: (colors[v] || K.mt) + "20", color: colors[v] || K.mt }}>{v}</span></td>;
+            }
+            if (c.key === "title" && typeof v === "string") v = v.substring(0, 32) + (v.length > 32 ? "…" : "");
+            return <td key={c.key} style={st}>{v}</td>;
+          })}
+        </tr>))}</tbody>
+      </table>
+    </div>, 2);
+  }
+
+  return null;
+}
+
+// ─── Voice Wave Animation ───
+function VoiceWave() {
+  return (<div style={{ display: "flex", alignItems: "center", gap: 3, height: 22 }}>
+    {[0, 1, 2, 3, 4].map(i => <div key={i} style={{ width: 3, borderRadius: 2, background: K.rd, animation: `vwave .55s ease-in-out ${i * 75}ms infinite alternate` }} />)}
+  </div>);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// MAIN APPLICATION
+// ═══════════════════════════════════════════════════════════════════
+export default function NexusApp() {
+  const [apiKey, setApiKey] = useState("");
+  const [query, setQuery] = useState("");
+  const [listening, setListening] = useState(false);
+  const [phase, setPhase] = useState("boot"); // boot|idle|thinking|ready
+  const [rawData, setRawData] = useState(null);
+  const [spec, setSpec] = useState(null);
+  const [logs, setLogs] = useState([]);
+  const [lastQ, setLastQ] = useState("");
+  const [filters, setFilters] = useState({});
+  const [filterOpts, setFilterOpts] = useState({});
+  const [agentMode, setAgentMode] = useState("local"); // local|openai
+  const [showKey, setShowKey] = useState(false);
+  const recRef = useRef(null);
+  const inRef = useRef(null);
+
+  const log = useCallback((msg, type = "info") => setLogs(p => [...p.slice(-6), { msg, type, t: new Date().toLocaleTimeString() }]), []);
+
+  // Boot: load from REST APIs
+  useEffect(() => {
+    (async () => {
+      log("🔌 Fetching from FakeStoreAPI...", "api");
+      try {
+        const [prods, carts, users] = await Promise.all([
+          fetch(APIS.products).then(r => r.json()),
+          fetch(APIS.carts).then(r => r.json()),
+          fetch(APIS.users).then(r => r.json()),
+        ]);
+        log(`✅ API: ${prods.length} products, ${carts.length} carts, ${users.length} users`, "success");
+        const data = buildOrderData(prods, carts, users);
+        log(`✅ Enriched: ${data.orders.length} orders generated`, "success");
+        setRawData(data);
+        setFilterOpts({
+          status: [...new Set(data.orders.map(o => o.status))],
+          region: [...new Set(data.orders.map(o => o.region))],
+          channel: [...new Set(data.orders.map(o => o.channel))],
+          category: [...new Set(data.orders.flatMap(o => o.items.map(i => (i.category || "").replace(/'/g, ""))))],
+          priority: ["High", "Medium", "Low"],
+        });
+        setPhase("idle");
+        log("🟢 Ready — type or speak a command", "success");
+      } catch (e) {
+        log("⚠️ API failed: " + e.message, "warn");
+        // Minimal fallback
+        const fp = Array.from({ length: 20 }, (_, i) => ({ id: i + 1, title: "Product " + (i + 1), price: +(10 + Math.random() * 190).toFixed(2), category: ["electronics", "jewelery", "mens clothing", "womens clothing"][i % 4] }));
+        const data = buildOrderData(fp, [], [{ id: 1 }]);
+        setRawData(data); setPhase("idle");
+        log("🟡 Using generated data", "warn");
+      }
+    })();
+  }, []);
+
+  // Process query
+  const process = useCallback(async (q) => {
+    if (!q.trim() || !rawData) return;
+    setLastQ(q); setFilters({}); setPhase("thinking");
+    log(`🎤 "${q}"`, "voice");
+
+    const summary = {
+      totalOrders: rawData.summary.totalOrders,
+      totalRevenue: rawData.summary.totalRevenue,
+      statuses: rawData.byStatus.map(s => s.name + ":" + s.value),
+      regions: rawData.byRegion.map(r => r.name),
+      channels: rawData.byChannel.map(c => c.name),
+      categories: rawData.byCategory.map(c => c.name),
+    };
+
+    let result;
+    if (agentMode === "openai" && apiKey.trim()) {
+      log("🧠 Sending to GPT-4o-mini...", "api");
+      try {
+        result = await callAgent(q, summary, apiKey.trim());
+        log(`✅ Agent: ${result.widgets?.length || 0} widgets planned`, "success");
+      } catch (e) {
+        log(`⚠️ OpenAI error: ${e.message}`, "warn");
+        log("↩️ Falling back to local agent", "info");
+        result = localAgent(q);
+      }
+    } else {
+      log("🧠 Local agent analyzing...", "api");
+      await new Promise(r => setTimeout(r, 400));
+      result = localAgent(q);
+      log(`✅ Layout: ${result.widgets?.length || 0} widgets`, "success");
+    }
+
+    setSpec(result);
+    setPhase("ready");
+    log("🎨 Dashboard rendered", "success");
+  }, [rawData, apiKey, agentMode, log]);
+
+  // Speech recognition
+  useEffect(() => {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SR) {
+      const r = new SR(); r.continuous = false; r.interimResults = true; r.lang = "en-US";
+      r.onresult = e => {
+        let fin = "", tmp = "";
+        for (let i = e.resultIndex; i < e.results.length; i++) {
+          if (e.results[i].isFinal) fin += e.results[i][0].transcript;
+          else tmp += e.results[i][0].transcript;
+        }
+        setQuery(fin || tmp);
+        if (fin) { setListening(false); process(fin); }
+      };
+      r.onend = () => setListening(false);
+      r.onerror = () => setListening(false);
+      recRef.current = r;
+    }
+  }, [process]);
+
+  const toggleVoice = () => {
+    if (!recRef.current) { log("⚠️ Speech API not supported in this browser", "warn"); return; }
+    if (listening) { recRef.current.stop(); setListening(false); }
+    else { recRef.current.start(); setListening(true); log("🎙️ Listening...", "voice"); }
+  };
+
+  const toggleFilter = (field, val) => setFilters(p => {
+    const cur = p[field] || [];
+    return { ...p, [field]: cur.includes(val) ? cur.filter(v => v !== val) : [...cur, val] };
+  });
+
+  const CMDS = [
+    { l: "📦 Overview", q: "Show complete order overview" },
+    { l: "💰 Revenue", q: "Revenue analysis and sales trends" },
+    { l: "⚠️ Issues", q: "Show cancelled and returned orders" },
+    { l: "🌍 Regions", q: "Orders by geographic region" },
+    { l: "📈 Trends", q: "Monthly order trends and growth" },
+    { l: "🏷️ Products", q: "Top performing products" },
+    { l: "📡 Channels", q: "Sales channel breakdown" },
+    { l: "🎯 Executive", q: "CEO executive KPI summary" },
+  ];
+
+  return (
+    <div style={{ minHeight: "100vh", background: K.bg, color: K.tx, fontFamily: "'DM Sans','Inter',system-ui,sans-serif", display: "flex" }}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
+@keyframes slideUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+@keyframes vwave{from{height:4px}to{height:18px}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes glow{0%,100%{box-shadow:0 0 12px #2F7CF610}50%{box-shadow:0 0 28px #2F7CF630}}
+*{box-sizing:border-box;margin:0;padding:0}
+::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:${K.bg}}::-webkit-scrollbar-thumb{background:${K.bd};border-radius:3px}
+::selection{background:#2F7CF640}
+input::placeholder{color:${K.dm}}`}</style>
+
+      {/* ═══ LEFT PANEL ═══ */}
+      <div style={{ width: 310, minWidth: 310, borderRight: `1px solid ${K.bd}`, display: "flex", flexDirection: "column", background: K.sf, height: "100vh", position: "sticky", top: 0 }}>
+
+        {/* Brand + API Key */}
+        <div style={{ padding: "18px 18px 14px", borderBottom: `1px solid ${K.bd}` }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+            <div style={{ width: 32, height: 32, borderRadius: 9, background: `linear-gradient(135deg,${K.ac},${K.pr})`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 700, color: "#fff" }}>N</div>
+            <div><div style={{ fontSize: 14, fontWeight: 700 }}>NEXUS</div><div style={{ fontSize: 9, color: K.dm, letterSpacing: 1.2, textTransform: "uppercase" }}>Agentic Order Dashboard</div></div>
+          </div>
+
+          {/* Mode toggle */}
+          <div style={{ display: "flex", gap: 4, marginBottom: 10, background: K.sa, borderRadius: 8, padding: 3 }}>
+            {[["local", "🧠 Local"], ["openai", "🤖 OpenAI"]].map(([m, label]) => (
+              <button key={m} onClick={() => setAgentMode(m)} style={{ flex: 1, padding: "6px 0", borderRadius: 6, border: "none", background: agentMode === m ? K.ac + "30" : "transparent", color: agentMode === m ? K.ac : K.mt, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", transition: "all .15s" }}>{label}</button>
+            ))}
+          </div>
+
+          {/* API Key input */}
+          {agentMode === "openai" && (
+            <div style={{ marginBottom: 10, animation: "slideUp .3s ease both" }}>
+              <div style={{ fontSize: 10, color: K.mt, marginBottom: 4 }}>OpenAI API Key (GPT-4o-mini)</div>
+              <div style={{ display: "flex", gap: 4 }}>
+                <input value={apiKey} onChange={e => setApiKey(e.target.value)} type={showKey ? "text" : "password"} placeholder="sk-..." style={{ flex: 1, background: K.sa, border: `1px solid ${K.bd}`, borderRadius: 8, padding: "8px 10px", color: K.tx, fontSize: 12, outline: "none", fontFamily: "inherit" }} />
+                <button onClick={() => setShowKey(!showKey)} style={{ background: K.sa, border: `1px solid ${K.bd}`, borderRadius: 8, padding: "0 8px", color: K.mt, cursor: "pointer", fontSize: 12 }}>{showKey ? "🙈" : "👁️"}</button>
+              </div>
+              <div style={{ fontSize: 9, color: K.dm, marginTop: 4 }}>Key stays in browser. Never sent anywhere except OpenAI.</div>
+            </div>
+          )}
+
+          {/* Search */}
+          <form onSubmit={e => { e.preventDefault(); process(query); }}>
+            <div style={{ display: "flex", alignItems: "center", background: K.sa, border: `1px solid ${listening ? K.rd : K.bd}`, borderRadius: 10, padding: "0 12px", marginBottom: 8, animation: listening ? "glow 2s infinite" : "none" }}>
+              <input ref={inRef} value={query} onChange={e => setQuery(e.target.value)} placeholder="Ask about orders..." style={{ flex: 1, background: "transparent", border: "none", outline: "none", color: K.tx, fontSize: 13, padding: "10px 0", fontFamily: "inherit" }} />
+              {listening && <VoiceWave />}
+              {query && <button type="button" onClick={() => { setQuery(""); inRef.current?.focus(); }} style={{ background: "none", border: "none", color: K.dm, cursor: "pointer", fontSize: 13 }}>✕</button>}
+            </div>
+            <div style={{ display: "flex", gap: 6 }}>
+              <button type="button" onClick={toggleVoice} style={{ width: 38, height: 38, borderRadius: 9, border: `1px solid ${listening ? K.rd : K.bd}`, background: listening ? K.rd + "20" : K.sa, color: listening ? K.rd : K.mt, cursor: "pointer", fontSize: 17, display: "flex", alignItems: "center", justifyContent: "center" }}>🎙️</button>
+              <button type="submit" disabled={phase === "thinking"} style={{ flex: 1, height: 38, borderRadius: 9, border: "none", background: `linear-gradient(135deg,${K.ac},${K.pr})`, color: "#fff", fontWeight: 600, fontSize: 12, cursor: "pointer", fontFamily: "inherit", opacity: phase === "thinking" ? .6 : 1 }}>
+                {phase === "thinking" ? "Agent thinking..." : "Run Query →"}
+              </button>
+            </div>
+          </form>
+        </div>
+
+        {/* Quick Commands */}
+        <div style={{ padding: "12px 18px", borderBottom: `1px solid ${K.bd}` }}>
+          <div style={{ fontSize: 9, color: K.dm, letterSpacing: 1, textTransform: "uppercase", marginBottom: 8 }}>Quick Commands</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+            {CMDS.map(c => (<button key={c.l} onClick={() => { setQuery(c.q); process(c.q); }} style={{ padding: "5px 9px", borderRadius: 7, border: `1px solid ${K.bd}`, background: K.sa, color: K.tx, cursor: "pointer", fontSize: 10, fontFamily: "inherit", transition: "all .15s" }} onMouseEnter={e => e.currentTarget.style.borderColor = K.ac} onMouseLeave={e => e.currentTarget.style.borderColor = K.bd}>{c.l}</button>))}
+          </div>
+        </div>
+
+        {/* Filters */}
+        {spec?.filters && rawData && (<div style={{ padding: "12px 18px", borderBottom: `1px solid ${K.bd}`, maxHeight: 200, overflowY: "auto" }}>
+          <div style={{ fontSize: 9, color: K.dm, letterSpacing: 1, textTransform: "uppercase", marginBottom: 8 }}>Live Filters</div>
+          {spec.filters.slice(0, 4).map(f => {
+            const opts = filterOpts[f.field] || [];
+            if (!opts.length) return null;
+            return (<div key={f.field} style={{ marginBottom: 8 }}>
+              <div style={{ fontSize: 10, color: K.mt, marginBottom: 4, fontWeight: 600 }}>{f.label}</div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
+                {opts.map(o => {
+                  const on = (filters[f.field] || []).includes(o);
+                  return <button key={o} onClick={() => toggleFilter(f.field, o)} style={{ padding: "2px 7px", borderRadius: 5, border: `1px solid ${on ? K.ac : K.bd}`, background: on ? K.ac + "20" : K.sa, color: on ? K.ac : K.dm, cursor: "pointer", fontSize: 9, fontFamily: "inherit" }}>{o}</button>;
+                })}
+              </div>
+            </div>);
+          })}
+        </div>)}
+
+        {/* Agent Log */}
+        <div style={{ flex: 1, padding: "12px 18px", overflowY: "auto" }}>
+          <div style={{ fontSize: 9, color: K.dm, letterSpacing: 1, textTransform: "uppercase", marginBottom: 8 }}>Agent Log</div>
+          {logs.map((l, i) => (<div key={i} style={{ fontSize: 10, color: l.type === "success" ? K.gn : l.type === "warn" ? K.am : l.type === "voice" ? K.rd : l.type === "api" ? K.cy : K.mt, marginBottom: 5, lineHeight: 1.4 }}>
+            <span style={{ color: K.dm, marginRight: 4 }}>{l.t}</span>{l.msg}
+          </div>))}
+        </div>
+
+        {/* Status bar */}
+        <div style={{ padding: "10px 18px", borderTop: `1px solid ${K.bd}`, fontSize: 9, color: K.dm }}>
+          {rawData ? <span style={{ color: K.gn }}>● {rawData.summary.totalOrders} orders loaded</span> : <span style={{ color: K.am }}>○ Loading...</span>}
+          <div style={{ marginTop: 3 }}>Agent: {agentMode === "openai" && apiKey ? "GPT-4o-mini" : "Local NLP"} | Source: FakeStoreAPI</div>
+        </div>
+      </div>
+
+      {/* ═══ RIGHT: DASHBOARD AREA ═══ */}
+      <div style={{ flex: 1, padding: 24, overflowY: "auto", height: "100vh" }}>
+
+        {phase === "boot" && (<div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", animation: "slideUp .4s ease both" }}>
+          <div style={{ width: 44, height: 44, border: `3px solid ${K.bd}`, borderTopColor: K.ac, borderRadius: "50%", animation: "spin 1s linear infinite", marginBottom: 16 }} />
+          <div style={{ fontSize: 15, fontWeight: 600 }}>Loading Data Sources...</div>
+          <div style={{ fontSize: 12, color: K.mt, marginTop: 4 }}>Fetching from FakeStoreAPI REST endpoints</div>
+        </div>)}
+
+        {phase === "thinking" && (<div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", animation: "slideUp .4s ease both" }}>
+          <div style={{ width: 44, height: 44, border: `3px solid ${K.bd}`, borderTopColor: K.pr, borderRadius: "50%", animation: "spin .8s linear infinite", marginBottom: 16 }} />
+          <div style={{ fontSize: 15, fontWeight: 600 }}>Agent Analyzing...</div>
+          <div style={{ fontSize: 12, color: K.mt, marginTop: 4 }}>"{lastQ}"</div>
+          <div style={{ fontSize: 11, color: K.dm, marginTop: 8 }}>{agentMode === "openai" && apiKey ? "GPT-4o-mini deciding layout..." : "Local NLP parsing intent..."}</div>
+        </div>)}
+
+        {phase === "idle" && !spec && rawData && (<div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", animation: "slideUp .5s ease both" }}>
+          <div style={{ fontSize: 48, marginBottom: 14 }}>🎯</div>
+          <div style={{ fontSize: 22, fontWeight: 700, marginBottom: 6, background: `linear-gradient(135deg,${K.ac},${K.pr})`, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Ready for Commands</div>
+          <div style={{ fontSize: 13, color: K.mt, maxWidth: 460, textAlign: "center", lineHeight: 1.6, marginBottom: 24 }}>
+            Speak or type what you want to see. The AI agent analyzes your intent and builds a unique dashboard layout dynamically — charts, tables, KPIs, filters — all decided by the LLM in real-time.
+          </div>
+          <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 8, maxWidth: 520 }}>
+            {["Show order issues by region", "Revenue trends this year", "Top products performance", "Compare channels", "Executive KPI summary"].map(s => (
+              <div key={s} onClick={() => { setQuery(s); process(s); }} style={{ padding: "8px 14px", borderRadius: 9, border: `1px solid ${K.bd}`, background: K.sf, fontSize: 11, color: K.mt, cursor: "pointer", transition: "all .2s" }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = K.ac; e.currentTarget.style.color = K.tx; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = K.bd; e.currentTarget.style.color = K.mt; }}>
+                "{s}"
+              </div>
+            ))}
+          </div>
+          {agentMode === "local" && <div style={{ fontSize: 11, color: K.dm, marginTop: 20 }}>💡 Switch to OpenAI mode and add your API key for smarter, dynamic layouts</div>}
+        </div>)}
+
+        {/* RENDERED DASHBOARD */}
+        {spec && rawData && phase === "ready" && (<div style={{ animation: "slideUp .4s ease both" }}>
+          <div style={{ marginBottom: 22, paddingBottom: 14, borderBottom: `1px solid ${K.bd}` }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+              <div>
+                <div style={{ fontSize: 19, fontWeight: 700, letterSpacing: -.3 }}>{spec.title || "Dashboard"}</div>
+                {spec.insight && <div style={{ fontSize: 12, color: K.mt, marginTop: 4 }}>🤖 {spec.insight}</div>}
+              </div>
+              <div style={{ display: "flex", gap: 6 }}>
+                <div style={{ fontSize: 10, color: K.dm, padding: "3px 9px", background: K.sf, borderRadius: 7, border: `1px solid ${K.bd}` }}>{spec.widgets?.length || 0} widgets</div>
+                <div style={{ fontSize: 10, color: K.dm, padding: "3px 9px", background: K.sf, borderRadius: 7, border: `1px solid ${K.bd}` }}>{agentMode === "openai" && apiKey ? "GPT-4o-mini" : "Local"}</div>
+              </div>
+            </div>
+            {lastQ && <div style={{ fontSize: 11, color: K.dm, marginTop: 6 }}>Query: "{lastQ}"</div>}
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 16 }}>
+            {(spec.widgets || []).map((w, i) => <DynWidget key={i} spec={w} allData={rawData} delay={i * 80} filters={filters} />)}
+          </div>
+        </div>)}
+      </div>
+    </div>
+  );
+}

@@ -1,0 +1,578 @@
+import { useState, useEffect, useRef, useCallback } from "react";
+import {
+  AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
+  ResponsiveContainer, Legend, ComposedChart
+} from "recharts";
+
+/* ═══════════════════════════════════════════════════════════════════
+   NEXUS v3 — Agentic Order Intelligence Platform
+   
+   ARCHITECTURE:
+   ┌─ Voice/Text Input ─┐
+   │    ↓                │
+   │ OpenAI GPT-4o-mini  │ ← returns JSON dashboard spec
+   │    ↓                │
+   │ Dynamic Renderer    │ ← builds ANY layout from spec
+   │    ↓                │
+   │ Real Data Layer     │ ← FakeStoreAPI + enrichment
+   └─────────────────────┘
+   
+   OPENAI SETUP:
+   1. Click the 🔑 icon in the command bar
+   2. Paste your OpenAI API key (sk-...)
+   3. Get key from: https://platform.openai.com/api-keys
+   ═══════════════════════════════════════════════════════════════════ */
+
+// ─── DESIGN SYSTEM: Refined dark luxury ───
+const C = {
+  bg: "#04060C", bg2: "#080D18", sf: "#0C1322", sf2: "#101B2E",
+  bd: "#182540", bd2: "#1E3050", bh: "#2A4470",
+  tx: "#ECF0F6", tx2: "#C4CDD9", mt: "#7A8BA0", dm: "#3E5068",
+  ac: "#3B8BF6", ac2: "#60A5FA", pr: "#8B5CF6", pr2: "#A78BFA",
+  gn: "#10B981", gn2: "#34D399", am: "#F59E0B", am2: "#FBBF24",
+  rd: "#EF4444", rd2: "#F87171", cy: "#06B6D4", pk: "#EC4899",
+};
+const PAL = ["#3B8BF6","#8B5CF6","#10B981","#F59E0B","#EF4444","#06B6D4","#EC4899","#6366F1","#14B8A6","#F97316"];
+const fU = n => { if (n == null) return "—"; const a = Math.abs(n); if (a >= 1e9) return "$" + (n/1e9).toFixed(1) + "B"; if (a >= 1e6) return "$" + (n/1e6).toFixed(1) + "M"; if (a >= 1e3) return "$" + (n/1e3).toFixed(1) + "K"; return "$" + Number(n).toFixed(2); };
+const fN = n => { if (n == null) return "—"; if (Math.abs(n) >= 1e6) return (n/1e6).toFixed(1) + "M"; if (Math.abs(n) >= 1e3) return (n/1e3).toFixed(1) + "K"; return String(Math.round(n)); };
+
+// ─── REST API SOURCES ───
+const ENDPOINTS = {
+  products: "https://fakestoreapi.com/products",
+  carts: "https://fakestoreapi.com/carts",
+  users: "https://fakestoreapi.com/users",
+};
+
+// ─── DATA ENRICHMENT: Real API → 200 orders ───
+function enrichOrders(products, carts, users) {
+  const ST = ["Delivered","Shipped","Processing","Pending","Cancelled","Returned"];
+  const RG = ["North America","Europe","Asia Pacific","Latin America","Middle East"];
+  const CH = ["Web Store","Mobile App","Marketplace","Wholesale","In-Store"];
+  const now = Date.now(); const orders = [];
+
+  for (let i = 1; i <= 200; i++) {
+    const ni = 1 + Math.floor(Math.random() * 4); const items = []; let total = 0;
+    for (let j = 0; j < ni; j++) {
+      const p = products[Math.floor(Math.random() * products.length)];
+      const q = 1 + Math.floor(Math.random() * 5);
+      items.push({ productId: p.id, title: p.title, price: p.price, quantity: q, category: p.category });
+      total += p.price * q;
+    }
+    const da = Math.floor(Math.random() * 365);
+    const dt = new Date(now - da * 864e5);
+    orders.push({
+      id: 1000 + i, userId: 1 + Math.floor(Math.random() * users.length),
+      items, total: Math.round(total * 100) / 100,
+      status: ST[Math.floor(Math.random() * ST.length)],
+      region: RG[Math.floor(Math.random() * RG.length)],
+      channel: CH[Math.floor(Math.random() * CH.length)],
+      date: dt.toISOString(),
+      month: dt.toLocaleDateString("en", { month: "short", year: "2-digit" }),
+      dayOfWeek: dt.toLocaleDateString("en", { weekday: "short" }),
+      priority: Math.random() > .7 ? "High" : Math.random() > .4 ? "Medium" : "Low",
+      discount: Math.random() > .6 ? Math.round(Math.random() * 25) : 0,
+    });
+  }
+
+  // Aggregations
+  const byStatus = {}; ST.forEach(s => byStatus[s] = 0);
+  const byRegion = {}; RG.forEach(r => byRegion[r] = { count: 0, revenue: 0 });
+  const byChannel = {}; CH.forEach(c => byChannel[c] = { count: 0, revenue: 0 });
+  const byCat = {}; const byMonth = {};
+  let totRev = 0, totItems = 0;
+  orders.forEach(o => {
+    byStatus[o.status]++;
+    byRegion[o.region].count++; byRegion[o.region].revenue += o.total;
+    byChannel[o.channel].count++; byChannel[o.channel].revenue += o.total;
+    o.items.forEach(it => {
+      const cat = (it.category || "").replace(/'/g, "");
+      if (!byCat[cat]) byCat[cat] = { count: 0, revenue: 0, qty: 0 };
+      byCat[cat].count++; byCat[cat].revenue += it.price * it.quantity; byCat[cat].qty += it.quantity;
+      totItems += it.quantity;
+    });
+    if (!byMonth[o.month]) byMonth[o.month] = { month: o.month, orders: 0, revenue: 0, dt: o.date };
+    byMonth[o.month].orders++; byMonth[o.month].revenue += o.total;
+    totRev += o.total;
+  });
+  Object.values(byMonth).forEach(m => { m.avgValue = Math.round(m.revenue / m.orders); m.revenue = Math.round(m.revenue); });
+  const monthly = Object.values(byMonth).sort((a, b) => new Date(a.dt) - new Date(b.dt)).slice(-12);
+  const topProds = products.map(p => {
+    const os = orders.filter(o => o.items.some(it => it.productId === p.id));
+    return { ...p, ordCnt: os.length, rev: Math.round(os.reduce((s, o) => s + o.items.filter(it => it.productId === p.id).reduce((ss, it) => ss + it.price * it.quantity, 0), 0)) };
+  }).sort((a, b) => b.rev - a.rev).slice(0, 10);
+
+  return {
+    orders, products, users,
+    summary: { totalOrders: 200, totalRevenue: Math.round(totRev), avgOrderValue: Math.round(totRev / 200), totalItems: totItems, uniqueCustomers: new Set(orders.map(o => o.userId)).size, cancelledOrders: byStatus["Cancelled"] || 0, returnedOrders: byStatus["Returned"] || 0, deliveryRate: Math.round((byStatus["Delivered"] || 0) / 200 * 100) },
+    byStatus: Object.entries(byStatus).map(([k, v]) => ({ name: k, value: v })),
+    byRegion: Object.entries(byRegion).map(([k, v]) => ({ name: k, ...v, revenue: Math.round(v.revenue) })),
+    byChannel: Object.entries(byChannel).map(([k, v]) => ({ name: k, ...v, revenue: Math.round(v.revenue) })),
+    byCategory: Object.entries(byCat).map(([k, v]) => ({ name: k.substring(0, 15), ...v, revenue: Math.round(v.revenue) })),
+    monthlyTrend: monthly,
+    recentOrders: [...orders].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 30),
+    topProducts: topProds,
+    dayOfWeek: ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].map(d => ({ day: d, orders: orders.filter(o => o.dayOfWeek.startsWith(d.substring(0, 2))).length })),
+  };
+}
+
+// ═══ AGENTIC LAYER: OpenAI GPT-4o-mini ═══
+const SYS_PROMPT = `You are an AI dashboard architect. Given a user's question about order/ecommerce data, return a JSON dashboard spec.
+
+Data keys: summary, byStatus, byRegion, byChannel, byCategory, monthlyTrend, recentOrders, topProducts, dayOfWeek
+
+Summary fields: totalOrders, totalRevenue, avgOrderValue, totalItems, uniqueCustomers, cancelledOrders, returnedOrders, deliveryRate
+
+RESPOND WITH ONLY RAW JSON. No markdown, no backticks.
+
+Schema:
+{
+  "title": "string",
+  "insight": "one-sentence AI insight about data",
+  "widgets": [
+    { "type": "kpi|bar|pie|area|line|table|composed", "title": "string", "dataKey": "string", "span": 1|2|3|4, "config": {} }
+  ],
+  "filters": [{"field":"status|region|channel|category|priority","label":"string"}],
+  "layout": "cols-4"
+}
+
+Config by type:
+- kpi: {"metrics":[{"label":"str","valueKey":"field in summary","icon":"emoji","color":"#hex","format":"currency|number|percent"}]}  
+- bar: {"xKey":"str","yKeys":[{"key":"str","color":"#hex","name":"str"}],"layout":"horizontal|vertical"}
+- area/line: {"xKey":"str","yKeys":[{"key":"str","color":"#hex","name":"str"}]}
+- pie: {"nameKey":"str","valueKey":"str"}
+- table: {"columns":[{"key":"str","label":"str","align":"left|right","format":"currency|number|status|text"}],"limit":number}
+- composed: {"xKey":"str","bars":[...],"lines":[...],"areas":[...]}
+
+Rules:
+1. ALWAYS include 4-6 KPI cards as first widget with span:4 using dataKey "summary"
+2. Use span:2 for medium charts, span:4 for wide charts/tables, span:1 for small
+3. AIM FOR 6-12 widgets filling a 4-column grid beautifully
+4. For "issues" focus on Cancelled/Returned statuses
+5. For "revenue" focus on financial metrics and trends
+6. For recentOrders table columns: id, status, total, region, channel, priority
+7. For topProducts table: title, category, price, rev, ordCnt
+8. Always include at least 3 different chart types for visual variety
+9. For pie charts with byRegion/byChannel use count or revenue as valueKey
+10. Include insightful title and insight sentence`;
+
+async function callOpenAI(query, dataSummary, apiKey) {
+  const resp = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
+    body: JSON.stringify({
+      model: "gpt-4o-mini", temperature: 0.3, max_tokens: 2000,
+      messages: [
+        { role: "system", content: SYS_PROMPT },
+        { role: "user", content: `Query: "${query}"\nData: ${JSON.stringify(dataSummary)}` }
+      ],
+      response_format: { type: "json_object" }
+    })
+  });
+  if (!resp.ok) { const e = await resp.json().catch(() => ({})); throw new Error(e.error?.message || `HTTP ${resp.status}`); }
+  const data = await resp.json();
+  return JSON.parse((data.choices?.[0]?.message?.content || "").replace(/```json|```/g, "").trim());
+}
+
+// ─── LOCAL FALLBACK AGENT ───
+function localAgent(query) {
+  const l = query.toLowerCase();
+  const w = []; let p = 20;
+  w.push({ type: "kpi", title: "Key Metrics", dataKey: "summary", span: 4, priority: p--, config: { metrics: [
+    { label: "Total Orders", valueKey: "totalOrders", icon: "📦", color: C.ac, format: "number" },
+    { label: "Total Revenue", valueKey: "totalRevenue", icon: "💰", color: C.gn, format: "currency" },
+    { label: "Avg Order Value", valueKey: "avgOrderValue", icon: "📊", color: C.pr, format: "currency" },
+    { label: "Unique Customers", valueKey: "uniqueCustomers", icon: "👥", color: C.am, format: "number" },
+    { label: "Delivery Rate", valueKey: "deliveryRate", icon: "✅", color: C.cy, format: "percent" },
+    { label: "Cancelled", valueKey: "cancelledOrders", icon: "🚫", color: C.rd, format: "number" },
+  ]}});
+
+  const f = { rev: /revenue|sales|money|financ/i.test(l), iss: /issue|problem|cancel|return|fail/i.test(l), tr: /trend|month|growth|time|histor/i.test(l), rg: /region|geo|where|location|area/i.test(l), pr: /product|item|top|best|perform|catalog/i.test(l), ch: /channel|source|platform|origin/i.test(l) };
+
+  if (f.iss) {
+    w.push({ type: "pie", title: "Order Status Distribution", dataKey: "byStatus", span: 2, config: { nameKey: "name", valueKey: "value" } });
+    w.push({ type: "bar", title: "Issues by Region", dataKey: "byRegion", span: 2, config: { xKey: "name", yKeys: [{ key: "count", color: C.rd, name: "Orders" }] } });
+    w.push({ type: "area", title: "Order Volume Trend", dataKey: "monthlyTrend", span: 4, config: { xKey: "month", yKeys: [{ key: "orders", color: C.ac, name: "Orders" }] } });
+    w.push({ type: "table", title: "Flagged Orders — Cancelled & Returned", dataKey: "recentOrders", span: 4, config: { columns: [{ key: "id", label: "Order #" }, { key: "status", label: "Status", format: "status" }, { key: "total", label: "Amount", format: "currency", align: "right" }, { key: "region", label: "Region" }, { key: "channel", label: "Channel" }, { key: "priority", label: "Priority", format: "status" }], limit: 12 } });
+  } else if (f.rev) {
+    w.push({ type: "area", title: "Monthly Revenue Trend", dataKey: "monthlyTrend", span: 4, config: { xKey: "month", yKeys: [{ key: "revenue", color: C.gn, name: "Revenue" }] } });
+    w.push({ type: "bar", title: "Revenue by Product Category", dataKey: "byCategory", span: 2, config: { xKey: "name", yKeys: [{ key: "revenue", color: C.pr, name: "Revenue" }] } });
+    w.push({ type: "pie", title: "Revenue by Sales Channel", dataKey: "byChannel", span: 2, config: { nameKey: "name", valueKey: "revenue" } });
+    w.push({ type: "bar", title: "Revenue by Region", dataKey: "byRegion", span: 2, config: { xKey: "name", yKeys: [{ key: "revenue", color: C.ac, name: "Revenue" }], layout: "vertical" } });
+    w.push({ type: "table", title: "Top Revenue-Generating Products", dataKey: "topProducts", span: 2, config: { columns: [{ key: "title", label: "Product" }, { key: "price", label: "Unit Price", format: "currency", align: "right" }, { key: "rev", label: "Revenue", format: "currency", align: "right" }, { key: "ordCnt", label: "Orders", align: "right" }], limit: 8 } });
+  } else if (f.tr) {
+    w.push({ type: "composed", title: "Monthly Orders vs Revenue vs Avg Value", dataKey: "monthlyTrend", span: 4, config: { xKey: "month", bars: [{ key: "orders", color: C.ac + "80", name: "Orders" }], lines: [{ key: "avgValue", color: C.am, name: "Avg Value" }], areas: [{ key: "revenue", color: C.gn, name: "Revenue" }] } });
+    w.push({ type: "bar", title: "Orders by Day of Week", dataKey: "dayOfWeek", span: 2, config: { xKey: "day", yKeys: [{ key: "orders", color: C.cy, name: "Orders" }] } });
+    w.push({ type: "pie", title: "Order Status Mix", dataKey: "byStatus", span: 2, config: { nameKey: "name", valueKey: "value" } });
+  } else if (f.rg) {
+    w.push({ type: "bar", title: "Orders & Revenue by Region", dataKey: "byRegion", span: 4, config: { xKey: "name", yKeys: [{ key: "count", color: C.ac, name: "Orders" }, { key: "revenue", color: C.gn, name: "Revenue" }] } });
+    w.push({ type: "pie", title: "Revenue Share by Region", dataKey: "byRegion", span: 2, config: { nameKey: "name", valueKey: "revenue" } });
+    w.push({ type: "pie", title: "Order Volume by Region", dataKey: "byRegion", span: 2, config: { nameKey: "name", valueKey: "count" } });
+  } else if (f.pr) {
+    w.push({ type: "bar", title: "Top Products by Revenue", dataKey: "topProducts", span: 4, config: { xKey: "title", yKeys: [{ key: "rev", color: C.gn, name: "Revenue" }], layout: "vertical" } });
+    w.push({ type: "pie", title: "Units Sold by Category", dataKey: "byCategory", span: 2, config: { nameKey: "name", valueKey: "qty" } });
+    w.push({ type: "table", title: "Product Performance Details", dataKey: "topProducts", span: 2, config: { columns: [{ key: "title", label: "Product" }, { key: "price", label: "Price", format: "currency", align: "right" }, { key: "rev", label: "Revenue", format: "currency", align: "right" }, { key: "ordCnt", label: "Orders", align: "right" }], limit: 10 } });
+  } else if (f.ch) {
+    w.push({ type: "bar", title: "Channel Performance", dataKey: "byChannel", span: 2, config: { xKey: "name", yKeys: [{ key: "count", color: C.ac, name: "Orders" }, { key: "revenue", color: C.gn, name: "Revenue" }] } });
+    w.push({ type: "pie", title: "Channel Revenue Share", dataKey: "byChannel", span: 2, config: { nameKey: "name", valueKey: "revenue" } });
+    w.push({ type: "area", title: "Monthly Trend", dataKey: "monthlyTrend", span: 4, config: { xKey: "month", yKeys: [{ key: "revenue", color: C.gn, name: "Revenue" }, { key: "orders", color: C.ac, name: "Orders" }] } });
+  } else {
+    w.push({ type: "area", title: "Revenue Trend", dataKey: "monthlyTrend", span: 4, config: { xKey: "month", yKeys: [{ key: "revenue", color: C.gn, name: "Revenue" }] } });
+    w.push({ type: "pie", title: "Order Status", dataKey: "byStatus", span: 2, config: { nameKey: "name", valueKey: "value" } });
+    w.push({ type: "bar", title: "By Region", dataKey: "byRegion", span: 2, config: { xKey: "name", yKeys: [{ key: "count", color: C.ac, name: "Orders" }] } });
+    w.push({ type: "pie", title: "By Channel", dataKey: "byChannel", span: 2, config: { nameKey: "name", valueKey: "count" } });
+    w.push({ type: "bar", title: "By Category", dataKey: "byCategory", span: 2, config: { xKey: "name", yKeys: [{ key: "revenue", color: C.pr, name: "Revenue" }] } });
+    w.push({ type: "table", title: "Recent Orders", dataKey: "recentOrders", span: 4, config: { columns: [{ key: "id", label: "#" }, { key: "status", label: "Status", format: "status" }, { key: "total", label: "Amount", format: "currency", align: "right" }, { key: "region", label: "Region" }, { key: "channel", label: "Channel" }, { key: "priority", label: "Priority", format: "status" }], limit: 10 } });
+  }
+  const title = f.iss ? "⚠️ Order Issues Analysis" : f.rev ? "💰 Revenue Intelligence" : f.tr ? "📈 Trend Analysis" : f.rg ? "🌍 Regional Breakdown" : f.pr ? "🏷️ Product Performance" : f.ch ? "📡 Channel Analytics" : "📊 Order Intelligence Overview";
+  return { title, insight: "Dashboard generated from your query with " + w.length + " intelligent widgets", widgets: w, filters: [{ field: "status", label: "Status" }, { field: "region", label: "Region" }, { field: "channel", label: "Channel" }], layout: "cols-4" };
+}
+
+// ═══ TOOLTIP ═══
+const Tip = ({ active, payload, label }) => {
+  if (!active || !payload?.length) return null;
+  return (<div style={{ background: "#0F172A", border: "1px solid #334155", borderRadius: 10, padding: "10px 14px", fontSize: 11, boxShadow: "0 8px 32px #0008" }}>
+    <div style={{ color: "#94A3B8", marginBottom: 4, fontWeight: 600 }}>{label}</div>
+    {payload.map((p, i) => (<div key={i} style={{ color: p.color, display: "flex", gap: 8, alignItems: "center", marginTop: 2 }}>
+      <span style={{ width: 8, height: 8, borderRadius: "50%", background: p.color }} />{p.name}: <b>{typeof p.value === "number" ? (p.value >= 1000 ? fN(p.value) : p.value.toLocaleString()) : p.value}</b>
+    </div>))}
+  </div>);
+};
+
+// ═══ DYNAMIC WIDGET RENDERER ═══
+function W({ spec, data, delay = 0, filters }) {
+  let d = data[spec.dataKey];
+  if (!d) d = spec.dataKey === "summary" ? data.summary : null;
+  if (!d) return null;
+  if (Array.isArray(d) && spec.dataKey === "recentOrders" && filters) {
+    Object.entries(filters).forEach(([f, v]) => { if (v?.length) d = d.filter(r => v.includes(r[f])); });
+  }
+  const cfg = spec.config || {};
+  const spanStyle = spec.span >= 4 ? "1 / -1" : spec.span >= 3 ? "span 3" : spec.span >= 2 ? "span 2" : undefined;
+
+  const card = (ch, minH = 320) => (<div style={{ background: `linear-gradient(135deg, ${C.sf}, ${C.sf2}08)`, border: `1px solid ${C.bd}`, borderRadius: 18, padding: 22, animation: `rise .5s cubic-bezier(.22,1,.36,1) ${delay}ms both`, gridColumn: spanStyle, minHeight: spec.type === "kpi" ? "auto" : minH, transition: "border-color .25s, box-shadow .25s, transform .25s", cursor: "default" }}
+    onMouseEnter={e => { e.currentTarget.style.borderColor = C.bd2; e.currentTarget.style.boxShadow = `0 8px 40px ${C.bg}CC`; e.currentTarget.style.transform = "translateY(-2px)"; }}
+    onMouseLeave={e => { e.currentTarget.style.borderColor = C.bd; e.currentTarget.style.boxShadow = "none"; e.currentTarget.style.transform = "translateY(0)"; }}>
+    {spec.type !== "kpi" && <div style={{ marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+      <div style={{ fontSize: 14, fontWeight: 600, color: C.tx, letterSpacing: -.2 }}>{spec.title}</div>
+      <div style={{ fontSize: 9, color: C.dm, padding: "3px 8px", background: C.bg2, borderRadius: 6, border: `1px solid ${C.bd}`, textTransform: "uppercase", letterSpacing: .5 }}>{spec.type}</div>
+    </div>}
+    {ch}
+  </div>);
+
+  if (spec.type === "kpi") {
+    return card(
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 14 }}>
+        {(cfg.metrics || []).map((m, i) => {
+          const val = d?.[m.valueKey];
+          const display = m.format === "currency" ? fU(val) : m.format === "percent" ? val + "%" : fN(val);
+          return (<div key={i} style={{ background: C.bg2, border: `1px solid ${C.bd}`, borderRadius: 16, padding: "18px 20px", position: "relative", overflow: "hidden", animation: `rise .45s cubic-bezier(.22,1,.36,1) ${delay + i * 60}ms both`, transition: "transform .2s, border-color .2s" }}
+            onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-3px)"; e.currentTarget.style.borderColor = (m.color || C.ac) + "60"; }}
+            onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.borderColor = C.bd; }}>
+            <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, background: `linear-gradient(90deg, ${m.color || C.ac}, ${m.color || C.ac}20)`, borderRadius: "16px 16px 0 0" }} />
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+              <div>
+                <div style={{ fontSize: 10, color: C.mt, letterSpacing: 1, textTransform: "uppercase", marginBottom: 8, fontWeight: 500 }}>{m.label}</div>
+                <div style={{ fontSize: 28, fontWeight: 700, color: C.tx, letterSpacing: -1, lineHeight: 1 }}>{display}</div>
+              </div>
+              <div style={{ width: 40, height: 40, borderRadius: 12, background: (m.color || C.ac) + "15", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>{m.icon}</div>
+            </div>
+          </div>);
+        })}
+      </div>);
+  }
+
+  if (spec.type === "bar") {
+    const v = cfg.layout === "vertical";
+    return card(<div style={{ height: 270 }}><ResponsiveContainer>
+      <BarChart data={d} layout={v ? "vertical" : "horizontal"} margin={v ? { left: 80 } : { bottom: 15 }}>
+        <CartesianGrid strokeDasharray="3 3" stroke={C.bd} />
+        {v ? <><XAxis type="number" stroke={C.dm} fontSize={10} tickFormatter={x => x >= 1000 ? fN(x) : x} /><YAxis dataKey={cfg.xKey} type="category" stroke={C.dm} fontSize={9} width={75} /></> :
+          <><XAxis dataKey={cfg.xKey} stroke={C.dm} fontSize={9} angle={-12} textAnchor="end" height={42} /><YAxis stroke={C.dm} fontSize={10} tickFormatter={x => x >= 1000 ? fN(x) : x} /></>}
+        <Tooltip content={<Tip />} />
+        {(cfg.yKeys || []).map((y, i) => <Bar key={i} dataKey={y.key} fill={y.color || PAL[i]} radius={v ? [0, 6, 6, 0] : [6, 6, 0, 0]} name={y.name || y.key} />)}
+        {(cfg.yKeys || []).length > 1 && <Legend />}
+      </BarChart>
+    </ResponsiveContainer></div>);
+  }
+
+  if (spec.type === "area") {
+    return card(<div style={{ height: 270 }}><ResponsiveContainer>
+      <AreaChart data={d}>
+        <defs>{(cfg.yKeys || []).map((y, i) => <linearGradient key={i} id={`g${delay}${i}`} x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor={y.color || PAL[i]} stopOpacity={.35} /><stop offset="95%" stopColor={y.color || PAL[i]} stopOpacity={.02} /></linearGradient>)}</defs>
+        <CartesianGrid strokeDasharray="3 3" stroke={C.bd} />
+        <XAxis dataKey={cfg.xKey} stroke={C.dm} fontSize={10} /><YAxis stroke={C.dm} fontSize={10} tickFormatter={x => x >= 1000 ? fN(x) : x} /><Tooltip content={<Tip />} />
+        {(cfg.yKeys || []).map((y, i) => <Area key={i} type="monotone" dataKey={y.key} stroke={y.color || PAL[i]} fill={`url(#g${delay}${i})`} strokeWidth={2.5} name={y.name || y.key} />)}
+        {(cfg.yKeys || []).length > 1 && <Legend />}
+      </AreaChart>
+    </ResponsiveContainer></div>);
+  }
+
+  if (spec.type === "line") {
+    return card(<div style={{ height: 270 }}><ResponsiveContainer>
+      <LineChart data={d}>
+        <CartesianGrid strokeDasharray="3 3" stroke={C.bd} /><XAxis dataKey={cfg.xKey} stroke={C.dm} fontSize={10} /><YAxis stroke={C.dm} fontSize={10} /><Tooltip content={<Tip />} />
+        {(cfg.yKeys || []).map((y, i) => <Line key={i} type="monotone" dataKey={y.key} stroke={y.color || PAL[i]} strokeWidth={2.5} dot={false} name={y.name || y.key} />)}<Legend />
+      </LineChart>
+    </ResponsiveContainer></div>);
+  }
+
+  if (spec.type === "pie") {
+    return card(<div style={{ height: 270 }}><ResponsiveContainer>
+      <PieChart><Pie data={d} dataKey={cfg.valueKey || "value"} nameKey={cfg.nameKey || "name"} cx="50%" cy="50%" outerRadius={100} innerRadius={50} paddingAngle={2} label={({ name, percent }) => `${(name||"").substring(0,10)} ${(percent * 100).toFixed(0)}%`} fontSize={10} strokeWidth={0}>
+        {d.map((_, i) => <Cell key={i} fill={PAL[i % PAL.length]} />)}</Pie>
+        <Tooltip content={<Tip />} />
+      </PieChart>
+    </ResponsiveContainer></div>);
+  }
+
+  if (spec.type === "composed") {
+    return card(<div style={{ height: 270 }}><ResponsiveContainer>
+      <ComposedChart data={d}>
+        <CartesianGrid strokeDasharray="3 3" stroke={C.bd} /><XAxis dataKey={cfg.xKey} stroke={C.dm} fontSize={10} /><YAxis stroke={C.dm} fontSize={10} tickFormatter={x => x >= 1000 ? fN(x) : x} /><Tooltip content={<Tip />} />
+        {(cfg.areas || []).map((a, i) => <Area key={"a" + i} type="monotone" dataKey={a.key} fill={(a.color || PAL[i]) + "25"} stroke={a.color || PAL[i]} strokeWidth={2} name={a.name} />)}
+        {(cfg.bars || []).map((b, i) => <Bar key={"b" + i} dataKey={b.key} fill={b.color || PAL[i + 2]} radius={[4, 4, 0, 0]} name={b.name} />)}
+        {(cfg.lines || []).map((ln, i) => <Line key={"l" + i} type="monotone" dataKey={ln.key} stroke={ln.color || PAL[i + 4]} strokeWidth={2} dot={false} name={ln.name} />)}
+        <Legend />
+      </ComposedChart>
+    </ResponsiveContainer></div>);
+  }
+
+  if (spec.type === "table") {
+    const cols = cfg.columns || []; const lim = cfg.limit || 10;
+    const rows = Array.isArray(d) ? d.slice(0, lim) : [];
+    return card(<div style={{ maxHeight: 340, overflowY: "auto", borderRadius: 12, border: `1px solid ${C.bd}` }}>
+      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+        <thead><tr style={{ background: C.bg2, position: "sticky", top: 0, zIndex: 2 }}>
+          {cols.map(c => <th key={c.key} style={{ padding: "10px 12px", textAlign: c.align || "left", color: C.mt, fontWeight: 600, fontSize: 10, textTransform: "uppercase", letterSpacing: .6, borderBottom: `1px solid ${C.bd}` }}>{c.label}</th>)}
+        </tr></thead>
+        <tbody>{rows.map((row, ri) => (<tr key={ri} style={{ transition: "background .15s" }} onMouseEnter={e => e.currentTarget.style.background = C.bg2} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+          {cols.map(c => {
+            let v = row[c.key]; const st = { padding: "10px 12px", textAlign: c.align || "left", color: C.tx, borderBottom: `1px solid ${C.bd}15` };
+            if (c.format === "currency" && typeof v === "number") v = "$" + v.toFixed(2);
+            if (c.format === "status") {
+              const clr = { Delivered: C.gn, Shipped: C.ac, Processing: C.am, Pending: C.mt, Cancelled: C.rd, Returned: C.pk, High: C.rd, Medium: C.am, Low: C.gn };
+              return <td key={c.key} style={st}><span style={{ padding: "3px 10px", borderRadius: 8, fontSize: 10, fontWeight: 600, background: (clr[v] || C.mt) + "18", color: clr[v] || C.mt, letterSpacing: .3 }}>{v}</span></td>;
+            }
+            if (c.key === "title" && typeof v === "string") v = v.substring(0, 30) + (v.length > 30 ? "…" : "");
+            return <td key={c.key} style={st}>{v}</td>;
+          })}
+        </tr>))}</tbody>
+      </table>
+    </div>, 380);
+  }
+  return null;
+}
+
+// ═══ MAIN APPLICATION ═══
+export default function Nexus() {
+  const [key, setKey] = useState(""); const [showKeyInput, setShowKeyInput] = useState(false);
+  const [query, setQuery] = useState(""); const [listening, setListening] = useState(false);
+  const [phase, setPhase] = useState("boot"); const [rawData, setRawData] = useState(null);
+  const [spec, setSpec] = useState(null); const [logs, setLogs] = useState([]);
+  const [lastQ, setLastQ] = useState(""); const [filters, setFilters] = useState({});
+  const [fOpts, setFOpts] = useState({}); const [showLog, setShowLog] = useState(false);
+  const recRef = useRef(null); const inRef = useRef(null);
+
+  const log = useCallback((m, t = "info") => setLogs(p => [...p.slice(-8), { m, t, ts: new Date().toLocaleTimeString() }]), []);
+
+  useEffect(() => {
+    (async () => {
+      log("🔌 Connecting to FakeStoreAPI...", "api");
+      try {
+        const [pr, ca, us] = await Promise.all([fetch(ENDPOINTS.products).then(r => r.json()), fetch(ENDPOINTS.carts).then(r => r.json()), fetch(ENDPOINTS.users).then(r => r.json())]);
+        log(`✅ ${pr.length} products · ${ca.length} carts · ${us.length} users`, "ok");
+        const d = enrichOrders(pr, ca, us);
+        log(`✅ ${d.orders.length} orders enriched`, "ok");
+        setRawData(d);
+        setFOpts({ status: [...new Set(d.orders.map(o => o.status))], region: [...new Set(d.orders.map(o => o.region))], channel: [...new Set(d.orders.map(o => o.channel))], priority: ["High", "Medium", "Low"] });
+        setPhase("idle"); log("🟢 Ready", "ok");
+      } catch (e) {
+        log("⚠️ " + e.message, "warn");
+        const fp = Array.from({ length: 20 }, (_, i) => ({ id: i + 1, title: "Product " + (i + 1), price: +(10 + Math.random() * 190).toFixed(2), category: ["electronics", "jewelery", "mens clothing", "womens clothing"][i % 4] }));
+        setRawData(enrichOrders(fp, [], [{ id: 1 }])); setPhase("idle");
+      }
+    })();
+  }, []);
+
+  const run = useCallback(async (q) => {
+    if (!q.trim() || !rawData) return;
+    setLastQ(q); setFilters({}); setPhase("think");
+    log(`🎤 "${q}"`, "voice");
+    const summary = { totalOrders: rawData.summary.totalOrders, totalRevenue: rawData.summary.totalRevenue, statuses: rawData.byStatus.map(s => s.name + ":" + s.value), regions: rawData.byRegion.map(r => r.name), channels: rawData.byChannel.map(c => c.name), categories: rawData.byCategory.map(c => c.name) };
+    let res;
+    if (key.trim()) {
+      log("🧠 GPT-4o-mini analyzing...", "api");
+      try { res = await callOpenAI(q, summary, key.trim()); log(`✅ ${res.widgets?.length || 0} widgets from OpenAI`, "ok"); }
+      catch (e) { log(`⚠️ ${e.message}`, "warn"); res = localAgent(q); }
+    } else {
+      log("🧠 Local agent...", "api"); await new Promise(r => setTimeout(r, 350)); res = localAgent(q); log(`✅ ${res.widgets?.length || 0} widgets`, "ok");
+    }
+    setSpec(res); setPhase("ready"); log("🎨 Rendered", "ok");
+  }, [rawData, key, log]);
+
+  useEffect(() => {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SR) {
+      const r = new SR(); r.continuous = false; r.interimResults = true; r.lang = "en-US";
+      r.onresult = e => { let f = "", t = ""; for (let i = e.resultIndex; i < e.results.length; i++) { if (e.results[i].isFinal) f += e.results[i][0].transcript; else t += e.results[i][0].transcript; } setQuery(f || t); if (f) { setListening(false); run(f); } };
+      r.onend = () => setListening(false); r.onerror = () => setListening(false); recRef.current = r;
+    }
+  }, [run]);
+
+  const mic = () => { if (!recRef.current) return; if (listening) { recRef.current.stop(); setListening(false); } else { recRef.current.start(); setListening(true); log("🎙️ Listening...", "voice"); } };
+  const togF = (f, v) => setFilters(p => { const c = p[f] || []; return { ...p, [f]: c.includes(v) ? c.filter(x => x !== v) : [...c, v] }; });
+
+  const CMDS = [
+    { i: "📦", l: "Overview", q: "Show complete order overview" },
+    { i: "💰", l: "Revenue", q: "Revenue analysis and sales trends" },
+    { i: "⚠️", l: "Issues", q: "Show cancelled and returned orders with issues" },
+    { i: "🌍", l: "Regions", q: "Orders by geographic region" },
+    { i: "📈", l: "Trends", q: "Monthly order trends and growth analysis" },
+    { i: "🏷️", l: "Products", q: "Top performing products analysis" },
+    { i: "📡", l: "Channels", q: "Sales channel performance breakdown" },
+    { i: "🎯", l: "Executive", q: "CEO executive summary with all KPIs" },
+  ];
+
+  return (
+    <div style={{ minHeight: "100vh", background: C.bg, color: C.tx, fontFamily: "'Space Grotesk','DM Sans',system-ui,sans-serif" }}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap');
+@keyframes rise{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+@keyframes vw{from{height:4px}to{height:20px}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+@keyframes glowPulse{0%,100%{box-shadow:0 0 20px ${C.ac}15}50%{box-shadow:0 0 40px ${C.ac}30}}
+*{box-sizing:border-box;margin:0;padding:0}
+::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:${C.bd};border-radius:3px}
+::selection{background:${C.ac}40}
+input::placeholder{color:${C.dm}}
+textarea::placeholder{color:${C.dm}}
+.cmd-btn:hover{border-color:${C.ac}!important;background:${C.ac}10!important;transform:translateY(-1px)}`}</style>
+
+      {/* ═══ TOP COMMAND BAR ═══ */}
+      <div style={{ position: "sticky", top: 0, zIndex: 100, background: C.bg + "E8", backdropFilter: "blur(24px)", borderBottom: `1px solid ${C.bd}` }}>
+        <div style={{ maxWidth: 1600, margin: "0 auto", padding: "16px 28px" }}>
+          {/* Row 1: Brand + Input + Actions */}
+          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+            {/* Brand */}
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+              <div style={{ width: 38, height: 38, borderRadius: 11, background: `linear-gradient(135deg, ${C.ac}, ${C.pr})`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, fontWeight: 700, color: "#fff", boxShadow: `0 4px 15px ${C.ac}30` }}>N</div>
+              <div><div style={{ fontSize: 16, fontWeight: 700, letterSpacing: -.5 }}>NEXUS</div><div style={{ fontSize: 9, color: C.dm, letterSpacing: 1.5, textTransform: "uppercase" }}>Agentic Intelligence</div></div>
+            </div>
+
+            {/* Command Input — Wide and Beautiful */}
+            <form onSubmit={e => { e.preventDefault(); run(query); }} style={{ flex: 1, display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{ flex: 1, display: "flex", alignItems: "center", background: C.sf, border: `1px solid ${listening ? C.rd + "80" : C.bd}`, borderRadius: 14, padding: "0 18px", transition: "all .25s", animation: listening ? "glowPulse 2s infinite" : "none", minHeight: 48 }}>
+                <span style={{ color: C.dm, marginRight: 12, fontSize: 18 }}>⌕</span>
+                <input ref={inRef} value={query} onChange={e => setQuery(e.target.value)} placeholder='Ask anything — "Show revenue trends by region" or "What products have the most cancellations?"'
+                  style={{ flex: 1, background: "transparent", border: "none", outline: "none", color: C.tx, fontSize: 14, padding: "13px 0", fontFamily: "inherit", fontWeight: 500 }} />
+                {listening && <div style={{ display: "flex", gap: 3, alignItems: "center", marginRight: 8 }}>{[0,1,2,3,4].map(i => <div key={i} style={{ width: 3, borderRadius: 2, background: C.rd, animation: `vw .55s ease-in-out ${i * 70}ms infinite alternate` }} />)}</div>}
+                {query && <button type="button" onClick={() => { setQuery(""); inRef.current?.focus(); }} style={{ background: "none", border: "none", color: C.dm, cursor: "pointer", fontSize: 16, padding: 4 }}>✕</button>}
+              </div>
+
+              {/* Voice Button */}
+              <button type="button" onClick={mic} style={{ width: 48, height: 48, borderRadius: 14, border: `1px solid ${listening ? C.rd : C.bd}`, background: listening ? C.rd + "15" : C.sf, color: listening ? C.rd : C.mt, cursor: "pointer", fontSize: 20, display: "flex", alignItems: "center", justifyContent: "center", transition: "all .2s", flexShrink: 0 }} title="Voice input">🎙️</button>
+
+              {/* Run */}
+              <button type="submit" disabled={phase === "think"} style={{ padding: "0 28px", height: 48, borderRadius: 14, border: "none", background: `linear-gradient(135deg, ${C.ac}, ${C.pr})`, color: "#fff", fontWeight: 600, fontSize: 14, cursor: "pointer", fontFamily: "inherit", flexShrink: 0, boxShadow: `0 4px 15px ${C.ac}30`, transition: "all .2s", opacity: phase === "think" ? .6 : 1 }}>
+                {phase === "think" ? "⏳ Thinking..." : "Run ▸"}
+              </button>
+
+              {/* API Key Toggle */}
+              <button type="button" onClick={() => setShowKeyInput(!showKeyInput)} style={{ width: 48, height: 48, borderRadius: 14, border: `1px solid ${key ? C.gn + "50" : C.bd}`, background: key ? C.gn + "10" : C.sf, color: key ? C.gn : C.dm, cursor: "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "all .2s" }} title="API Key">🔑</button>
+
+              {/* Log Toggle */}
+              <button type="button" onClick={() => setShowLog(!showLog)} style={{ width: 48, height: 48, borderRadius: 14, border: `1px solid ${C.bd}`, background: C.sf, color: C.dm, cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }} title="Agent Log">📋</button>
+            </form>
+          </div>
+
+          {/* API Key Input (expandable) */}
+          {showKeyInput && (<div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 10, animation: "rise .3s ease both", padding: "12px 16px", background: C.sf, borderRadius: 12, border: `1px solid ${C.bd}` }}>
+            <span style={{ fontSize: 12, color: C.mt, fontWeight: 600, flexShrink: 0 }}>OpenAI Key:</span>
+            <input value={key} onChange={e => setKey(e.target.value)} type="password" placeholder="sk-... (GPT-4o-mini — get from platform.openai.com/api-keys)" style={{ flex: 1, background: C.bg2, border: `1px solid ${C.bd}`, borderRadius: 8, padding: "8px 12px", color: C.tx, fontSize: 13, outline: "none", fontFamily: "inherit" }} />
+            <div style={{ fontSize: 10, color: key ? C.gn : C.dm, flexShrink: 0 }}>{key ? "✅ Key set — using GPT-4o-mini" : "No key — using local agent"}</div>
+          </div>)}
+
+          {/* Agent Log (expandable) */}
+          {showLog && (<div style={{ marginTop: 12, padding: "12px 16px", background: C.sf, borderRadius: 12, border: `1px solid ${C.bd}`, animation: "rise .3s ease both", maxHeight: 150, overflowY: "auto" }}>
+            {logs.map((l, i) => (<div key={i} style={{ fontSize: 11, color: l.t === "ok" ? C.gn : l.t === "warn" ? C.am : l.t === "voice" ? C.rd : l.t === "api" ? C.cy : C.mt, marginBottom: 3 }}><span style={{ color: C.dm, marginRight: 6 }}>{l.ts}</span>{l.m}</div>))}
+          </div>)}
+
+          {/* Row 2: Quick Commands + Filters */}
+          <div style={{ marginTop: 12, display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+            {CMDS.map(c => (<button key={c.l} className="cmd-btn" onClick={() => { setQuery(c.q); run(c.q); }} style={{ padding: "6px 12px", borderRadius: 9, border: `1px solid ${C.bd}`, background: C.sf, color: C.tx2, cursor: "pointer", fontSize: 11, fontFamily: "inherit", fontWeight: 500, transition: "all .2s", display: "flex", alignItems: "center", gap: 4 }}>{c.i} {c.l}</button>))}
+
+            {spec?.filters && (<>
+              <div style={{ width: 1, height: 20, background: C.bd, margin: "0 4px" }} />
+              {spec.filters.slice(0, 3).map(f => {
+                const opts = fOpts[f.field] || [];
+                if (!opts.length) return null;
+                const active = filters[f.field] || [];
+                return (<div key={f.field} style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                  <span style={{ fontSize: 10, color: C.dm, marginRight: 2 }}>{f.label}:</span>
+                  {opts.slice(0, 5).map(o => (<button key={o} onClick={() => togF(f.field, o)} style={{ padding: "3px 8px", borderRadius: 6, border: `1px solid ${active.includes(o) ? C.ac : C.bd}`, background: active.includes(o) ? C.ac + "18" : "transparent", color: active.includes(o) ? C.ac : C.dm, cursor: "pointer", fontSize: 9, fontFamily: "inherit", transition: "all .15s" }}>{o}</button>))}
+                </div>);
+              })}
+            </>)}
+          </div>
+        </div>
+      </div>
+
+      {/* ═══ MAIN DASHBOARD AREA ═══ */}
+      <div style={{ maxWidth: 1600, margin: "0 auto", padding: "24px 28px" }}>
+
+        {phase === "boot" && (<div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "70vh", animation: "rise .4s ease both" }}>
+          <div style={{ width: 50, height: 50, border: `3px solid ${C.bd}`, borderTopColor: C.ac, borderRadius: "50%", animation: "spin 1s linear infinite", marginBottom: 18 }} />
+          <div style={{ fontSize: 16, fontWeight: 600 }}>Connecting to Data Sources</div>
+          <div style={{ fontSize: 13, color: C.mt, marginTop: 6 }}>FakeStoreAPI → Products · Carts · Users</div>
+        </div>)}
+
+        {phase === "think" && (<div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "70vh", animation: "rise .4s ease both" }}>
+          <div style={{ width: 50, height: 50, border: `3px solid ${C.bd}`, borderTopColor: C.pr, borderRadius: "50%", animation: "spin .8s linear infinite", marginBottom: 18 }} />
+          <div style={{ fontSize: 16, fontWeight: 600 }}>Agent Building Dashboard</div>
+          <div style={{ fontSize: 13, color: C.mt, marginTop: 6 }}>"{lastQ}"</div>
+          <div style={{ fontSize: 11, color: C.dm, marginTop: 10 }}>{key ? "GPT-4o-mini selecting widgets & layout..." : "Local NLP analyzing intent..."}</div>
+        </div>)}
+
+        {phase === "idle" && !spec && rawData && (<div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "70vh", animation: "rise .6s ease both" }}>
+          <div style={{ fontSize: 56, marginBottom: 18 }}>🎯</div>
+          <div style={{ fontSize: 28, fontWeight: 700, marginBottom: 8, background: `linear-gradient(135deg, ${C.ac}, ${C.pr})`, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>What would you like to see?</div>
+          <div style={{ fontSize: 14, color: C.mt, maxWidth: 560, textAlign: "center", lineHeight: 1.7, marginBottom: 32 }}>
+            Type a question or click a quick command above. The AI agent will analyze your intent and dynamically build the perfect dashboard — choosing chart types, layouts, and data views in real-time.
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, maxWidth: 650, width: "100%" }}>
+            {["Show me order issues by region", "Revenue trends and top products", "Compare all sales channels", "Which categories generate the most revenue?", "Executive KPI summary", "Orders with high priority pending"].map(s => (
+              <div key={s} onClick={() => { setQuery(s); run(s); }} style={{ padding: "14px 16px", borderRadius: 12, border: `1px solid ${C.bd}`, background: C.sf, fontSize: 12, color: C.mt, cursor: "pointer", transition: "all .2s", textAlign: "center", lineHeight: 1.4 }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = C.ac; e.currentTarget.style.color = C.tx; e.currentTarget.style.transform = "translateY(-2px)"; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = C.bd; e.currentTarget.style.color = C.mt; e.currentTarget.style.transform = "translateY(0)"; }}>
+                "{s}"
+              </div>
+            ))}
+          </div>
+          <div style={{ marginTop: 28, display: "flex", gap: 16, alignItems: "center" }}>
+            <div style={{ fontSize: 11, color: C.dm }}>🔌 {rawData.summary.totalOrders} orders loaded from REST API</div>
+            <div style={{ fontSize: 11, color: key ? C.gn : C.am }}>{key ? "🤖 GPT-4o-mini connected" : "🧠 Local mode — add API key for smarter dashboards"}</div>
+          </div>
+        </div>)}
+
+        {/* RENDERED DASHBOARD */}
+        {spec && rawData && phase === "ready" && (<div style={{ animation: "rise .45s cubic-bezier(.22,1,.36,1) both" }}>
+          <div style={{ marginBottom: 24, display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+            <div>
+              <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: -.5 }}>{spec.title || "Dashboard"}</div>
+              {spec.insight && <div style={{ fontSize: 13, color: C.mt, marginTop: 5, maxWidth: 700 }}>🤖 {spec.insight}</div>}
+              {lastQ && <div style={{ fontSize: 11, color: C.dm, marginTop: 4 }}>Query: "{lastQ}"</div>}
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <div style={{ fontSize: 10, color: C.dm, padding: "5px 12px", background: C.sf, borderRadius: 8, border: `1px solid ${C.bd}`, fontWeight: 500 }}>{spec.widgets?.length || 0} widgets</div>
+              <div style={{ fontSize: 10, color: key ? C.gn : C.am, padding: "5px 12px", background: C.sf, borderRadius: 8, border: `1px solid ${C.bd}`, fontWeight: 500 }}>{key ? "GPT-4o-mini" : "Local"}</div>
+            </div>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16 }}>
+            {(spec.widgets || []).map((w, i) => <W key={i} spec={w} data={rawData} delay={i * 70} filters={filters} />)}
+          </div>
+        </div>)}
+      </div>
+    </div>
+  );
+}

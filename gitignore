@@ -1,0 +1,23 @@
+# Dependencies - THIS IS WHY YOUR UPLOAD IS 100MB
+node_modules/
+
+# Build output
+dist/
+build/
+
+# Environment variables (contains secrets)
+.env
+.env.local
+.env.production
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editor
+.vscode/
+.idea/
