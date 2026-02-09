@@ -8,7 +8,8 @@ import {
 
 /* ═══════════════════════════════════════════════════════════════════
    NEXUS v6 — World-Class Agentic Dashboard
-   
+
+   //mADHU
    ARCHITECTURE CHANGE: Dynamic data computation
    - AI now specifies WHAT data to compute + HOW to filter it
    - App computes aggregations on-the-fly from raw orders
