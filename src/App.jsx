@@ -1,4 +1,3 @@
-//Madhu
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
@@ -8,16 +7,14 @@ import {
 
 /* ═══════════════════════════════════════════════════════════════════
    NEXUS v6 — World-Class Agentic Dashboard
-
-   //mADHU
+   
    ARCHITECTURE CHANGE: Dynamic data computation
    - AI now specifies WHAT data to compute + HOW to filter it
    - App computes aggregations on-the-fly from raw orders
    - Supports any combination of filters/groupings
    - Shows AI's raw response for debugging
    ═══════════════════════════════════════════════════════════════════ */
-const OPENAI_KEY = import.meta.env.VITE_OPENAI_KEY || "";
-
+// API key is now stored server-side in Azure — no key needed in frontend
 
 const C = {
   bg: "#04060C", bg2: "#080D18", sf: "#0C1322", sf2: "#101B2E",
@@ -301,9 +298,9 @@ CRITICAL RULES:
 async function callGPT(query, sysPrompt, onLog) {
   for (let i = 1; i <= 3; i++) {
     try {
-      const resp = await fetch("https://api.openai.com/v1/chat/completions", {
+      const resp = await fetch("/api/chat", {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${OPENAI_KEY}` },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           model: "gpt-4o-mini-2024-07-18", temperature: 0.15, max_tokens: 3000,
           messages: [{ role: "system", content: sysPrompt }, { role: "user", content: query }],
