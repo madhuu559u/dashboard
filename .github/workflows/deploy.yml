@@ -15,6 +15,5 @@ jobs:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           action: "upload"
           app_location: "/"
+          api_location: "api"
           output_location: "dist"
-        env:
-          VITE_OPENAI_KEY: ${{ secrets.VITE_OPENAI_KEY }}
