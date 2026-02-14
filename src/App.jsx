@@ -1,5 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";import App1 from "./App1";
-import App2 from "./App2";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 
 
 import App1 from "./App1";
@@ -525,7 +524,7 @@ function Widget({ spec, orders, delay = 0, uiFilters }) {
 }
 
 // ═══ MAIN ═══
-export default function Nexus() {
+ function Nexus() {
   const [query, setQuery] = useState("");
   const [listening, setListening] = useState(false);
   const [phase, setPhase] = useState("boot");
