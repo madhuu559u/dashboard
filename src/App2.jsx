@@ -404,5 +404,3 @@ return(<div style={{width:"100vw",height:"100vh",fontFamily:T.by,color:T.tx,posi
 
 <div style={{position:"fixed",bottom:0,left:0,right:0,zIndex:12,pointerEvents:"none",padding:"0 12px 2px",display:"flex",justifyContent:"space-between"}}><span style={{fontFamily:T.mn,fontSize:7,letterSpacing:1,color:T.dm}}>{FAC.length} NODES | {SUPS.length} SUPPLIERS | {SM.totalShips} SHIPMENTS | {SM.totalPOs} POs | {SM.totalInv} INV</span><span style={{fontFamily:T.mn,fontSize:7,letterSpacing:1,color:T.dm}}>{time.toLocaleString()}</span></div>
 </div>);}
-
-export default App2;
