@@ -1,4 +1,10 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";import App1 from "./App1";
+import App2 from "./App2";
+
+
+import App1 from "./App1";
+import App2 from "./App2";
+
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -703,4 +709,14 @@ input::placeholder{color:${C.dm}}
       </main>
     </div>
   );
+}
+
+
+export default function App() {
+  const path = window.location.pathname.toLowerCase();
+
+  if (path === "/app1") return <App1 />;
+  if (path === "/app2") return <App2 />;
+
+  return <Nexus />;
 }
