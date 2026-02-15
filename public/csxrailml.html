@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CSX IARS AI Capacity Planning — 360° Technical Blueprint</title>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,700;1,6..72,400&family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#06090f;--bg2:#0c1220;--bg3:#131c30;--surface:#162040;--border:#1e3060;--text:#dfe6f0;--text2:#8899b4;--accent:#4f8fff;--accent2:#7cafff;--green:#00d68f;--green2:#33e0a8;--orange:#ffa033;--red:#ff5c5c;--purple:#a07cff;--cyan:#00c9db;--pink:#ff6eb4;--gold:#ffd700;--radius:10px}
+*{margin:0;padding:0;box-sizing:border-box}html{scroll-behavior:smooth}
+body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);line-height:1.72;font-size:15px}
+code,pre,.mono{font-family:'JetBrains Mono',monospace}
+::selection{background:rgba(79,143,255,.3)}
+.topbar{position:sticky;top:0;z-index:100;background:rgba(6,9,15,.88);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:0 28px;display:flex;align-items:center;gap:20px;height:52px;overflow-x:auto}
+.topbar .brand{font-family:'Newsreader',serif;font-weight:700;font-size:17px;color:var(--accent2);white-space:nowrap;letter-spacing:-.3px}
+.topbar a{color:var(--text2);text-decoration:none;font-size:12.5px;font-weight:500;white-space:nowrap;transition:color .15s;letter-spacing:.2px}
+.topbar a:hover{color:var(--accent2)}
+.hero{padding:72px 32px 56px;text-align:center;position:relative;overflow:hidden;background:linear-gradient(165deg,#060a12 0%,#0d1a35 35%,#0f1b30 65%,#08101c 100%)}
+.hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 60% 50% at 25% 30%,rgba(79,143,255,.08),transparent),radial-gradient(ellipse 50% 60% at 75% 70%,rgba(160,124,255,.06),transparent)}
+.hero *{position:relative}
+.hero .tag{display:inline-block;background:rgba(79,143,255,.1);border:1px solid rgba(79,143,255,.25);color:var(--accent2);border-radius:100px;padding:5px 16px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:20px}
+.hero h1{font-family:'Newsreader',serif;font-size:clamp(30px,4.5vw,52px);font-weight:700;line-height:1.15;margin-bottom:14px;color:var(--text)}
+.hero h1 em{font-style:italic;color:var(--accent2)}
+.hero .sub{color:var(--text2);font-size:16.5px;max-width:720px;margin:0 auto 28px;font-weight:300}
+.hero .pills{display:flex;gap:24px;justify-content:center;flex-wrap:wrap;font-size:12.5px;color:var(--text2);font-weight:500}
+.hero .pills span{display:flex;align-items:center;gap:6px}
+.hero .pills .dot{width:6px;height:6px;border-radius:50%}
+.wrap{max-width:1160px;margin:0 auto;padding:0 24px}
+section{padding:56px 0}
+.slabel{display:inline-block;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--accent);margin-bottom:10px}
+h2{font-family:'Newsreader',serif;font-size:30px;font-weight:700;margin-bottom:6px;line-height:1.2;letter-spacing:-.3px}
+h3{font-size:18px;font-weight:700;color:var(--text);margin:28px 0 10px}
+h4{font-size:15px;font-weight:700;color:var(--accent2);margin:16px 0 6px}
+p{margin-bottom:12px;color:var(--text2);font-weight:300}
+.lead{font-size:16px;color:var(--text);margin-bottom:20px;font-weight:300}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px;margin:20px 0}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:22px;transition:border-color .2s}
+.card:hover{border-color:var(--accent)}
+.card h4{margin:0 0 6px;color:var(--text);font-size:15px;font-weight:600}
+.card p{font-size:13.5px;margin:0}
+.tw{overflow-x:auto;margin:18px 0;border-radius:var(--radius);border:1px solid var(--border)}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+thead{background:var(--bg3)}
+th{text-align:left;padding:10px 14px;font-weight:600;color:var(--text);white-space:nowrap;border-bottom:2px solid var(--border);font-size:12.5px;text-transform:uppercase;letter-spacing:.5px}
+td{padding:9px 14px;border-bottom:1px solid rgba(30,48,96,.5);color:var(--text2)}
+tbody tr:hover{background:rgba(79,143,255,.04)}
+.cb{background:#080e1a;border:1px solid var(--border);border-radius:var(--radius);padding:18px 22px;overflow-x:auto;margin:14px 0;font-size:12.5px;line-height:1.85;color:#b0bec5;white-space:pre;font-family:'JetBrains Mono',monospace}
+.cb .c{color:#546e7a}.cb .k{color:#ff8a80}.cb .s{color:#80cbc4}.cb .f{color:#82b1ff}
+.arch{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:32px;margin:20px 0;overflow-x:auto}
+.aflow{display:flex;align-items:stretch;gap:0;min-width:860px}
+.anode{flex:1;text-align:center;padding:16px 8px}
+.abox{background:var(--surface);border:2px solid var(--border);border-radius:var(--radius);padding:14px 10px;min-height:80px;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:border-color .2s}
+.abox:hover{border-color:var(--accent)}
+.abox .ai{font-size:22px;margin-bottom:4px}.abox .at{font-weight:700;font-size:12.5px;color:var(--text)}.abox .as{font-size:10.5px;color:var(--text2);margin-top:3px}
+.aarr{display:flex;align-items:center;justify-content:center;width:36px;flex-shrink:0;color:var(--accent);font-size:18px}
+.met{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin:20px 0}
+.mc{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;text-align:center}
+.mc .v{font-family:'Newsreader',serif;font-size:26px;font-weight:700;margin-bottom:2px}
+.mc .l{font-size:11.5px;color:var(--text2);font-weight:500}
+.tabs{margin:20px 0}.tnav{display:flex;gap:2px;border-bottom:2px solid var(--border);flex-wrap:wrap}
+.tbtn{background:none;border:none;color:var(--text2);padding:9px 18px;font-size:13px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s;font-family:inherit}
+.tbtn:hover{color:var(--text)}.tbtn.on{color:var(--accent2);border-bottom-color:var(--accent2)}
+.tpan{display:none;padding:20px 0}.tpan.on{display:block}
+.cl{margin:14px 0}.cli{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid rgba(30,48,96,.4);font-size:13.5px}
+.cli:last-child{border-bottom:none}
+.ci{width:18px;height:18px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0;margin-top:2px}
+.ci.g{background:rgba(0,214,143,.15);color:var(--green)}.ci.b{background:rgba(79,143,255,.15);color:var(--accent)}.ci.o{background:rgba(255,160,51,.15);color:var(--orange)}.ci.r{background:rgba(255,92,92,.15);color:var(--red)}
+.mock{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin:18px 0}
+.mtbar{background:var(--bg3);padding:8px 14px;display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--border)}
+.mdot{width:9px;height:9px;border-radius:50%}.mdot.r{background:#ff5c5c}.mdot.y{background:#ffa033}.mdot.g{background:#00d68f}
+.mcont{padding:20px}
+.phase{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin:14px 0;position:relative;overflow:hidden}
+.phase::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px}
+.phase.p0::before{background:var(--cyan)}.phase.p1::before{background:var(--green)}.phase.p2::before{background:var(--purple)}.phase.p3::before{background:var(--orange)}
+.ptag{display:inline-block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;padding:3px 8px;border-radius:4px;margin-bottom:10px}
+.ptag.c{background:rgba(0,201,219,.12);color:var(--cyan)}.ptag.g{background:rgba(0,214,143,.12);color:var(--green2)}.ptag.p{background:rgba(160,124,255,.12);color:var(--purple)}.ptag.o{background:rgba(255,160,51,.12);color:var(--orange)}
+.alert{border-radius:var(--radius);padding:14px 18px;margin:14px 0;font-size:13.5px;display:flex;gap:10px;align-items:flex-start}
+.alert.i{background:rgba(79,143,255,.08);border:1px solid rgba(79,143,255,.18)}
+.alert.w{background:rgba(255,160,51,.08);border:1px solid rgba(255,160,51,.18)}
+.alert.s{background:rgba(0,214,143,.08);border:1px solid rgba(0,214,143,.18)}
+.alert.d{background:rgba(255,92,92,.08);border:1px solid rgba(255,92,92,.18)}
+.alert .ai2{font-size:16px;flex-shrink:0}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:20px}@media(max-width:768px){.two{grid-template-columns:1fr}}
+.sep{height:1px;background:linear-gradient(90deg,transparent,var(--border),transparent);margin:40px 0}
+.toc{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin:28px 0}
+.toc h3{margin:0 0 14px;font-size:16px}
+.tocg{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:6px}
+.toc a{color:var(--text2);text-decoration:none;font-size:13px;padding:5px 10px;border-radius:5px;display:flex;align-items:center;gap:7px;transition:all .15s;font-weight:400}
+.toc a:hover{background:rgba(79,143,255,.08);color:var(--accent2)}
+.toc .n{background:var(--bg3);color:var(--accent2);font-size:10px;font-weight:700;width:22px;height:22px;display:flex;align-items:center;justify-content:center;border-radius:5px;flex-shrink:0}
+.schema{background:#080e1a;border:1px solid var(--border);border-radius:var(--radius);padding:18px 22px;margin:14px 0;font-family:'JetBrains Mono',monospace;font-size:12.5px;line-height:1.9;white-space:pre;overflow-x:auto}
+.schema .f{color:#82b1ff}.schema .t{color:#80cbc4}.schema .c{color:#546e7a}.schema .cn{color:#ce93d8;font-weight:600;font-size:14px}
+.foot{background:var(--bg2);border-top:1px solid var(--border);padding:32px;text-align:center;color:var(--text2);font-size:12px}
+.fin{opacity:0;transform:translateY(16px);transition:opacity .5s,transform .5s}.fin.vis{opacity:1;transform:translateY(0)}
+.pipeline-flow{display:flex;align-items:center;gap:0;flex-wrap:nowrap;overflow-x:auto;padding:10px 0}
+.pf-step{background:var(--surface);border:2px solid var(--border);border-radius:var(--radius);padding:14px 16px;min-width:130px;text-align:center;flex-shrink:0;transition:border-color .2s}
+.pf-step:hover{border-color:var(--accent)}
+.pf-step .pf-icon{font-size:24px;margin-bottom:4px}
+.pf-step .pf-title{font-weight:700;font-size:12px;color:var(--text)}
+.pf-step .pf-sub{font-size:10px;color:var(--text2);margin-top:2px}
+.pf-arrow{width:32px;display:flex;align-items:center;justify-content:center;color:var(--accent);font-size:16px;flex-shrink:0}
+.llm-highlight{border-color:var(--gold)!important;box-shadow:0 0 20px rgba(255,215,0,.08)}
+.llm-highlight .pf-title{color:var(--gold)!important}
+</style>
+</head>
+<body>
+<nav class="topbar">
+<span class="brand">CSX&nbsp;IARS&nbsp;AI</span>
+<a href="#problem">Problem</a><a href="#objectives">Objectives</a><a href="#capabilities">Capabilities</a><a href="#approach">Approach</a><a href="#data">Data</a><a href="#pipeline">Pipeline</a><a href="#architecture">Architecture</a><a href="#phases">Phases</a><a href="#reporting">Reporting</a><a href="#mockups">Mockups</a><a href="#nfr">NFR</a><a href="#questions">Questions</a>
+</nav>
+<header class="hero">
+<div class="tag">360 Technical Blueprint</div>
+<h1>CSX IARS <em>AI-Powered</em> Capacity Planning</h1>
+<p class="sub">Transforming intermodal train capacity from manual, spreadsheet-driven processes to automated, predictive, data-driven operations &mdash; delivered through a disciplined phased approach across 32+ terminals built on Microsoft Fabric &amp; Azure AI.</p>
+<div class="pills">
+<span><span class="dot" style="background:var(--green)"></span>Pre-Proposal Phase</span>
+<span>Feb 2026</span>
+<span>Intermodal Division</span>
+<span>Microsoft Fabric / Azure OpenAI</span>
+</div>
+</header>
+
+<div class="wrap">
+
+<div class="toc fin">
+<h3>Document Map</h3>
+<div class="tocg">
+<a href="#problem"><span class="n">01</span>Problem Statement</a>
+<a href="#objectives"><span class="n">02</span>Business Objectives</a>
+<a href="#capabilities"><span class="n">03</span>Capabilities &amp; Phasing</a>
+<a href="#approach"><span class="n">04</span>Technical Approach</a>
+<a href="#data"><span class="n">05</span>Data Requirements</a>
+<a href="#pipeline"><span class="n">06</span>AI/ML &rarr; LLM Pipeline</a>
+<a href="#architecture"><span class="n">07</span>Azure Fabric Architecture</a>
+<a href="#phases"><span class="n">08</span>Phase Scope &amp; Deliverables</a>
+<a href="#reporting"><span class="n">09</span>Functional Req &amp; Reporting</a>
+<a href="#mockups"><span class="n">10</span>UI Mockups</a>
+<a href="#nfr"><span class="n">11</span>Non-Functional Requirements</a>
+<a href="#quickstart"><span class="n">12</span>Quick Start POC</a>
+<a href="#questions"><span class="n">13</span>Customer Discovery Questions</a>
+</div>
+</div>
+<div class="sep"></div>
+
+<!-- S1: PROBLEM -->
+<section id="problem" class="fin">
+<span class="slabel">Section 01</span>
+<h2>Problem Statement</h2>
+<p class="lead">Current standing and open space allocations in IARS are manually managed. Decisions rely on spreadsheets, institutional knowledge, and reactive processes &mdash; resulting in underutilization of standings, inconsistent open-space adjustments, limited forecasting, and lack of proactive alerts.</p>
+<div class="met">
+<div class="mc"><div class="v" style="color:var(--red)">64.75%</div><div class="l">Observed No-Show Rate</div></div>
+<div class="mc"><div class="v" style="color:var(--orange)">476/400</div><div class="l">Routine Overbooking</div></div>
+<div class="mc"><div class="v" style="color:var(--accent)">~54%</div><div class="l">Effective Utilization</div></div>
+<div class="mc"><div class="v" style="color:var(--purple)">32+</div><div class="l">Terminals to Standardize</div></div>
+</div>
+<div class="grid">
+<div class="card"><h4>Manual Allocation Management</h4><p>Standing and open space allocations managed through spreadsheets and institutional knowledge. Terminal operators make gut-feeling decisions with no systematic forecasting. When an experienced operator leaves, their knowledge goes with them.</p></div>
+<div class="card"><h4>Emotion-Based Decisions</h4><p>Allocation decisions influenced by individual judgment, relationships, and reactive processes rather than data-driven analysis. No standardized methodology &mdash; decisions vary wildly across terminals and operators.</p></div>
+<div class="card"><h4>Underutilization of Standings</h4><p>Premium customers hold standing allocations reserved whether used or not. With no-show rates as high as 64.75%, substantial train capacity is phantom-blocked &mdash; unavailable to other customers but never actually used.</p></div>
+<div class="card"><h4>Limited Forecasting &amp; No Proactive Alerts</h4><p>All decisions are backward-looking. No demand forecasting exists. No anomaly detection. Overbooking discovered only when containers arrive; underutilization identified only after trains depart with empty slots.</p></div>
+</div>
+<div class="alert d"><span class="ai2">&#x26A0;</span><div><strong>The Core Insight:</strong> Reservations drastically overstate actual demand. On a 400-capacity train with 476 reservations, only ~217 containers actually arrived (259 no-shows). The system must forecast <strong>net effective demand</strong> (actual ingates), not gross reservations.</div></div>
+</section>
+<div class="sep"></div>
+
+<!-- S2: OBJECTIVES -->
+<section id="objectives" class="fin">
+<span class="slabel">Section 02</span>
+<h2>Business Objectives</h2>
+<p class="lead">Five core objectives translating directly into measurable capabilities. The goal: transition from reactive, emotion-based decisions to proactive, data-driven operations.</p>
+<div class="tw"><table>
+<thead><tr><th>Objective</th><th>What It Means</th><th>How AI Delivers</th></tr></thead>
+<tbody>
+<tr><td><strong>Automate Open-Space Allocation</strong></td><td>Rule-based and AI-driven adjustments based on utilization thresholds</td><td>Configurable rule engine with ML-driven overrides. Human approval required in Phase 1.</td></tr>
+<tr><td><strong>Forecast Demand</strong></td><td>Predict demand using historical patterns, cancellations, no-shows, seasonality</td><td>Decomposed modeling: standing utilization + recurring industry + spot market. Model-agnostic framework allows algorithm selection based on data.</td></tr>
+<tr><td><strong>Explainable AI Recommendations</strong></td><td>Every recommendation includes clear rationale and confidence scores</td><td>SHAP feature importance + Azure OpenAI generates natural-language narrative explanations.</td></tr>
+<tr><td><strong>Operator Feedback Loop</strong></td><td>Operators approve/reject/modify; feedback improves the model</td><td>Component-level feedback capture. Periodic retraining incorporating operator corrections.</td></tr>
+<tr><td><strong>Data-Driven Operations</strong></td><td>Eliminate emotion-based decisions across all 32+ terminals</td><td>Standardized methodology with terminal-specific tuning. Full audit trail.</td></tr>
+</tbody></table></div>
+</section>
+<div class="sep"></div>
+
+<!-- S3: CAPABILITIES -->
+<section id="capabilities" class="fin">
+<span class="slabel">Section 03</span>
+<h2>Capabilities &amp; Phasing Strategy</h2>
+<p class="lead">The vision encompasses 12+ capabilities (multi-phase roadmap). We recommend a disciplined phased approach: deliver ONE core capability exceptionally well, validate with operators, then expand systematically.</p>
+<div class="alert i"><span class="ai2">&#x1F4A1;</span><div><strong>Why Phased Delivery Works:</strong> One capability done right builds operator trust. Each phase informs the next based on real feedback. Smaller increments reduce risk. Clear ROI at each phase gate.</div></div>
+<h3>Full Vision Capabilities</h3>
+<div class="tw"><table>
+<thead><tr><th>Priority</th><th>Capability</th><th>Business Value</th><th>Phase</th></tr></thead>
+<tbody>
+<tr><td><strong>P0</strong></td><td>AI-Driven Demand Forecasting with Explainability</td><td>Reduce capacity surprises, improve planning accuracy</td><td>Phase 1</td></tr>
+<tr><td>P1</td><td>Rule-Based Open Space Automation</td><td>Save operator time, consistent rule application</td><td>Phase 2</td></tr>
+<tr><td>P1</td><td>Anomaly Detection &amp; Operational Alerts</td><td>Proactive monitoring, early warning</td><td>Phase 2</td></tr>
+<tr><td>P2</td><td>Customer-Level Forecasting &amp; Insights</td><td>Account management, strategic relationships</td><td>Phase 2</td></tr>
+<tr><td>P2</td><td>Standby/Waitlist Optimization</td><td>Maximize revenue from waitlist customers</td><td>Phase 2/3</td></tr>
+<tr><td>P2</td><td>Cancellation &amp; No-Show Prediction</td><td>Better capacity planning, reduce waste</td><td>Phase 2</td></tr>
+<tr><td>P3</td><td>Chat/Query Interface (Azure OpenAI)</td><td>Natural language operations, what-if scenarios</td><td>Phase 3</td></tr>
+<tr><td>P3</td><td>Real-Time Train Car Supply Integration</td><td>Dynamic optimization with live data</td><td>Phase 3</td></tr>
+<tr><td>P3</td><td>Dynamic Customer Prioritization</td><td>Revenue optimization based on profitability</td><td>Phase 3</td></tr>
+</tbody></table></div>
+<h3>Phasing Summary</h3>
+<div class="tw"><table>
+<thead><tr><th>Phase</th><th>Core Capability</th><th>Business Value</th></tr></thead>
+<tbody>
+<tr style="background:rgba(0,201,219,.04)"><td><strong>Phase 0</strong></td><td>Data Discovery &amp; Validation</td><td>De-risk project, validate feasibility, establish baseline</td></tr>
+<tr style="background:rgba(0,214,143,.04)"><td><strong>Phase 1 MVP</strong></td><td>Demand Forecasting + Recommendations</td><td>Reduce surprises, improve planning accuracy</td></tr>
+<tr style="background:rgba(160,124,255,.04)"><td><strong>Phase 2</strong></td><td>Automation + Alerts + Customer Insights</td><td>Save operator time, proactive monitoring</td></tr>
+<tr style="background:rgba(255,160,51,.04)"><td><strong>Phase 3</strong></td><td>Intelligence Layer (Chat, Dynamic Optimization)</td><td>Advanced AI, real-time integration</td></tr>
+<tr><td><strong>TOTAL</strong></td><td><strong>Full vision delivered incrementally</strong></td><td><strong>Cumulative value with managed risk</strong></td></tr>
+</tbody></table></div>
+</section>
+<div class="sep"></div>
+<!-- S4: TECHNICAL APPROACH -->
+<section id="approach" class="fin">
+<span class="slabel">Section 04</span>
+<h2>Technical Approach &mdash; Decomposed Modeling</h2>
+<p class="lead">Container volume comprises distinct load types with different predictability. Our decomposed approach separates these into transparent business components for superior explainability, accuracy, and operator trust.</p>
+<h3>Why Decomposition Matters</h3>
+<div class="tw"><table>
+<thead><tr><th>Load Type</th><th>Predictability</th><th>Probable Model Approaches</th><th>Uncertainty</th></tr></thead>
+<tbody>
+<tr><td><strong>Standing Allocations</strong></td><td>Very High (contractual, stable)</td><td>Customer utilization rates, historical averages, classification models</td><td>&plusmn;3-5%</td></tr>
+<tr><td><strong>Recurring Industry</strong></td><td>Medium (known schedules, seasonal)</td><td>Time series decomposition, calendar-based, seasonality-aware methods</td><td>&plusmn;8-12%</td></tr>
+<tr><td><strong>Spot Market / One-Offs</strong></td><td>Low (inherently variable)</td><td>Gradient boosting ensembles, trend analysis, ensemble methods</td><td>&plusmn;20-40%</td></tr>
+</tbody></table></div>
+<div class="alert i"><span class="ai2">&#x1F4CA;</span><div><strong>Model Flexibility:</strong> We intentionally avoid hard-coding specific ML algorithms. The framework is <strong>model-agnostic</strong> &mdash; the decomposed architecture defines <em>what</em> to predict, not <em>how</em>. Algorithms selected, evaluated, and swapped based on actual data characteristics. Probable families: time-series, gradient boosting, ensembles, deep learning &mdash; final selection is data-driven.</div></div>
+<h3>Explainability Through Decomposition</h3>
+<div class="two"><div>
+<h4>&#x274C; Monolithic Approach</h4>
+<div class="cb" style="border-color:var(--red)"><span class="k">OPAQUE PREDICTION:</span>
+
+ AI says: 195 containers (85%)
+ 
+ Operator: <span class="s">"Why 195? Black box."</span></div>
+</div><div>
+<h4>&#x2705; Decomposed Approach (Proposed)</h4>
+<div class="cb" style="border-color:var(--green)"><span class="k">TRANSPARENT BREAKDOWN:</span>
+
+ Standing Util: 110 containers
+ Recurring: 40 containers
+ Spot Market: 45 &plusmn; 20
+ <span class="s">----------------------------</span>
+ TOTAL: 195 &plusmn; 21
+ OPEN SPACE REC: 85 slots
+
+ <span class="c">// Each component verifiable</span></div>
+</div></div>
+<h3>Multi-Horizon Prediction Strategy</h3>
+<div class="tw"><table>
+<thead><tr><th>Horizon</th><th>Primary Features</th><th>Business Value</th><th>Expected Accuracy</th></tr></thead>
+<tbody>
+<tr><td><strong>10+ days</strong></td><td>Seasonality, standings, calendar, historical patterns</td><td>Strategic planning: crew scheduling, equipment positioning</td><td>&plusmn;15-20% MAE</td></tr>
+<tr><td><strong>7 days</strong></td><td>Accumulating reservations, waybill signals, booking velocity</td><td>Operational planning: open-space adjustments</td><td>&plusmn;10-12% MAE</td></tr>
+<tr><td><strong>1 day</strong></td><td>Actual reservations, waybills, customer show-up rates</td><td>Tactical decisions: last-minute capacity adjustments</td><td>&plusmn;3-5% MAE</td></tr>
+</tbody></table></div>
+<h3>Probable Algorithm Families</h3>
+<p>Candidates &mdash; final selection determined by data characteristics in Phase 0. Models may be evaluated, ensembled, or swapped over time.</p>
+<div class="grid">
+<div class="card"><h4>Time Series Models</h4><p>Seasonal decomposition, trend detection, holiday effects. <em>Candidates: ARIMA, Prophet, exponential smoothing, or similar.</em></p></div>
+<div class="card"><h4>Gradient Boosting Ensembles</h4><p>Multi-feature tabular data. Feature importance via SHAP. <em>Candidates: XGBoost, LightGBM, CatBoost, or similar.</em></p></div>
+<div class="card"><h4>Ensemble / Stacking</h4><p>Meta-learner combining multiple models. Reduces variance. Production predictions leverage diverse model strengths.</p></div>
+<div class="card"><h4>Anomaly Detection</h4><p>Unsupervised spike/drop detection. <em>Candidates: Isolation Forest, CUSUM, Z-score, or similar.</em></p></div>
+<div class="card"><h4>Deep Learning (Phase 2+)</h4><p>Complex temporal dependencies. <em>Candidates: LSTM, Temporal Fusion Transformer.</em></p></div>
+<div class="card"><h4>LLM Integration (Azure OpenAI)</h4><p>Post-ML layer: converts model outputs into narratives, powers chat interface. Not for prediction &mdash; for <strong>communication</strong>.</p></div>
+</div>
+</section>
+<div class="sep"></div>
+
+<!-- S5: DATA -->
+<section id="data" class="fin">
+<span class="slabel">Section 05</span>
+<h2>Data Requirements</h2>
+<p class="lead">Data spanning train capacity, in-gate history, allocations, customer behavior, and external factors &mdash; mapped to IARS MongoDB collections and supporting systems (IARS, IRS, GOS).</p>
+<div class="two"><div>
+<h3>Core Operational Data</h3>
+<div class="cl">
+<div class="cli"><span class="ci g">&#10003;</span><span><strong>Train capacity</strong> &mdash; physical container limits per train</span></div>
+<div class="cli"><span class="ci g">&#10003;</span><span><strong>In-gate history (GOS)</strong> &mdash; actual container arrivals, ground truth</span></div>
+<div class="cli"><span class="ci g">&#10003;</span><span><strong>Allocations (IARS)</strong> &mdash; standing allocations, open space, operator decisions</span></div>
+<div class="cli"><span class="ci g">&#10003;</span><span><strong>Reservations (IRS MongoDB)</strong> &mdash; planned volumes, booking patterns</span></div>
+<div class="cli"><span class="ci g">&#10003;</span><span><strong>Cancellations &amp; No-shows</strong> &mdash; NOSHW statuses, timestamps</span></div>
+<div class="cli"><span class="ci g">&#10003;</span><span><strong>Waybill data</strong> &mdash; customer-specific lag patterns</span></div>
+<div class="cli"><span class="ci g">&#10003;</span><span><strong>Standby/waitlist</strong> &mdash; overflow demand signal</span></div>
+</div>
+</div><div>
+<h3>Contextual &amp; External Data</h3>
+<div class="cl">
+<div class="cli"><span class="ci b">&#x25B8;</span><span><strong>Day-of-week patterns</strong> &mdash; demand curves per corridor</span></div>
+<div class="cli"><span class="ci b">&#x25B8;</span><span><strong>Seasonality</strong> &mdash; peak season, quarterly cycles</span></div>
+<div class="cli"><span class="ci b">&#x25B8;</span><span><strong>Holidays</strong> &mdash; demand drops on major holidays</span></div>
+<div class="cli"><span class="ci b">&#x25B8;</span><span><strong>Weather</strong> (Phase 2) &mdash; impact on arrivals</span></div>
+<div class="cli"><span class="ci b">&#x25B8;</span><span><strong>Shock events</strong> (Phase 2) &mdash; port closures, strikes</span></div>
+<div class="cli"><span class="ci b">&#x25B8;</span><span><strong>Customer segmentation</strong> &mdash; tier, profitability</span></div>
+</div>
+</div></div>
+<h3>Primary Data Sources</h3>
+<div class="grid">
+<div class="card"><h4>IRS MongoDB</h4><p>Reservations (2.9M docs), waybills (2.3M docs), standby requests, history collections.</p></div>
+<div class="card"><h4>IARS Database</h4><p>Standing allocations, open-space adjustments, operator decisions, terminal allocation rules.</p></div>
+<div class="card"><h4>GOS (Gate Operating System)</h4><p>Actual gate-in/out data &mdash; <strong>ground truth</strong> for model training and accuracy measurement.</p></div>
+<div class="card"><h4>Current Spreadsheets</h4><p>Existing workflows, institutional knowledge, manual business rules to document in Phase 0.</p></div>
+</div>
+<h3>MongoDB Schema (Key Collections)</h3>
+<div class="schema"><span class="cn">reservation</span> <span class="c">// 2.9M docs</span>
+ <span class="f">reservationStatus</span>: <span class="t">"INGAT"|"NOSHW"|"ISSUE"</span> <span class="c">// outcome ground truth</span>
+ <span class="f">reservationType</span>: <span class="t">"STAND"|"OPEN"</span> <span class="c">// allocation type</span>
+ <span class="f">terminalCode</span>: <span class="t">"BP","LV","JX"</span> <span class="c">// terminal</span>
+ <span class="f">trainId</span>: <span class="t">"I010","M209"</span> <span class="c">// train</span>
+ <span class="f">partyId/Name</span>: <span class="t">String</span> <span class="c">// customer</span>
+ <span class="f">dayOfWeek</span>: <span class="t">"FRI"</span> <span class="c">// day patterns</span>
+
+<span class="cn">waybill</span> <span class="c">// 2.3M docs &mdash; leading demand indicator</span>
+ <span class="f">reservationId</span>: <span class="t">String</span> <span class="c">// links waybill to reservation</span>
+ <span class="f">createDate</span>: <span class="t">ISODate</span> <span class="c">// waybill-to-ingate lag</span></div>
+</section>
+<div class="sep"></div>
+<!-- S6: AI/ML PIPELINE -->
+<section id="pipeline" class="fin">
+<span class="slabel">Section 06</span>
+<h2>AI/ML &rarr; LLM Pipeline</h2>
+<p class="lead">Raw data flows through feature engineering and ML models to produce structured predictions, then passes through an <strong>Azure OpenAI LLM layer</strong> that transforms raw output into meaningful, validated, human-readable recommendations.</p>
+<div class="alert s"><span class="ai2">&#x1F9E0;</span><div><strong>Key Architecture Decision:</strong> ML models produce structured numerical predictions. The LLM layer (Azure OpenAI) sits <em>after</em> ML inference &mdash; it does NOT make predictions. Instead, it generates natural-language explanations, validates output coherence, and powers the conversational interface. Prediction accuracy from specialized ML; operator-friendly communication through LLM.</div></div>
+<h3>End-to-End Pipeline Flow</h3>
+<div class="arch" style="padding:24px">
+<div class="pipeline-flow">
+<div class="pf-step"><div class="pf-icon">&#x1F5C4;</div><div class="pf-title">Data Sources</div><div class="pf-sub">MongoDB, IARS,<br>GOS, External</div></div>
+<div class="pf-arrow">&rarr;</div>
+<div class="pf-step"><div class="pf-icon">&#x1F504;</div><div class="pf-title">Data Integration</div><div class="pf-sub">Fabric Mirroring<br>ETL Pipelines</div></div>
+<div class="pf-arrow">&rarr;</div>
+<div class="pf-step"><div class="pf-icon">&#x1F527;</div><div class="pf-title">Feature Eng</div><div class="pf-sub">Temporal, Customer<br>Terminal, External</div></div>
+<div class="pf-arrow">&rarr;</div>
+<div class="pf-step"><div class="pf-icon">&#x1F916;</div><div class="pf-title">ML Models</div><div class="pf-sub">Standing / Recurring<br>/ Spot (Decomposed)</div></div>
+<div class="pf-arrow">&rarr;</div>
+<div class="pf-step"><div class="pf-icon">&#x1F4CA;</div><div class="pf-title">SHAP + CI</div><div class="pf-sub">Feature Importance<br>Prediction Intervals</div></div>
+<div class="pf-arrow" style="color:var(--gold);font-weight:bold">&rarr;</div>
+<div class="pf-step llm-highlight"><div class="pf-icon">&#x2728;</div><div class="pf-title">Azure OpenAI</div><div class="pf-sub">Narrative Gen<br>Validation &amp; Summary</div></div>
+<div class="pf-arrow">&rarr;</div>
+<div class="pf-step"><div class="pf-icon">&#x1F4CB;</div><div class="pf-title">Recommendations</div><div class="pf-sub">Explainable Actions<br>Operator Dashboard</div></div>
+</div>
+</div>
+<h3>ML Output &rarr; LLM Enhancement</h3>
+<div class="two"><div>
+<h4>&#x1F916; Raw ML Output</h4>
+<div class="cb"><span class="k">STRUCTURED PREDICTION (JSON)</span>
+{
+ "train": "I010",
+ "terminal": "BP",
+ "standing_util": 0.92,
+ "recurring_pred": 40,
+ "spot_pred": 45,
+ "spot_ci": [25, 65],
+ "total_net_demand": 195,
+ "confidence": 0.85,
+ "shap_top": [
+ {"day_of_week_MON": +18},
+ {"standing_util_30d": +12},
+ {"standby_count": +8}
+ ]
+}</div>
+</div><div>
+<h4>&#x2728; LLM-Enhanced Output</h4>
+<div class="cb" style="border-color:var(--gold)"><span class="k">NARRATIVE RECOMMENDATION</span>
+
+<span class="s">Train I010 (BP &rarr; Pt. Newark)</span>
+
+<span class="f">ADD +15 Open Spaces</span>
+Current: 120 + 60 = 180
+Recommended: 120 + 75 = 195
+
+<span class="k">WHY:</span>
+Monday demand averages 195. Standing
+at 92% utilization (strong). ABC Mfg 
+weekly shipment expected (~40). 
+5 standby requests = unmet demand.
+
+<span class="k">CONFIDENCE:</span> HIGH (85%)
+<span class="k">RISK:</span> Spot &plusmn;20 uncertainty
+
+<span class="c">// ML predicted, LLM explained</span></div>
+</div></div>
+<h3>What the LLM Layer Does</h3>
+<div class="grid">
+<div class="card"><h4>&#x1F4DD; Narrative Generation</h4><p>Converts SHAP values and model outputs into plain-English explanations operators understand.</p></div>
+<div class="card"><h4>&#x2705; Output Validation</h4><p>Validates ML output for coherence and business logic. Flags contradictions with known constraints.</p></div>
+<div class="card"><h4>&#x1F4AC; Chat Interface (Phase 3)</h4><p>Powers natural-language operator queries with RAG over prediction data.</p></div>
+<div class="card"><h4>&#x1F52E; What-If Scenarios (Phase 3)</h4><p>Orchestrates pipeline re-runs with modified inputs. Summarizes projected impact in natural language.</p></div>
+</div>
+<h3>Feature Engineering</h3>
+<div class="cb"><span class="k">TEMPORAL:</span> day_of_week, week_of_year, month, is_holiday, days_to_holiday, is_peak_season
+<span class="k">HISTORICAL:</span> containers_yesterday, same_day_last_week, rolling_7d/30d/6mo_avg
+<span class="k">CUSTOMER:</span> standing_allocation, usage_rate, waybill_lag, no_show_rate, priority_tier
+<span class="k">TERMINAL:</span> terminal_code, capacity, avg_utilization, geographic_region
+<span class="k">BOOKING:</span> reservation_count, booking_velocity, cancellation_rate
+<span class="k">EXTERNAL:</span> weather (P2), precipitation, snow_flag, special_events (P2)</div>
+<h3>Feedback Loop</h3>
+<div class="cl">
+<div class="cli"><span class="ci g">1</span><span><strong>Capture:</strong> Every approve/reject/modify stored with operator ID, timestamp, structured reason</span></div>
+<div class="cli"><span class="ci g">2</span><span><strong>Component Learning:</strong> Identifies which component was wrong; updates only that model</span></div>
+<div class="cli"><span class="ci g">3</span><span><strong>Analyze:</strong> Weekly analysis of rejection patterns by recommendation type and terminal</span></div>
+<div class="cli"><span class="ci g">4</span><span><strong>Retrain:</strong> Periodic retraining incorporates operator corrections as weighted signal</span></div>
+<div class="cli"><span class="ci g">5</span><span><strong>Transparency:</strong> Show operators: "Your adjustments reduced error by 12% this month"</span></div>
+</div>
+<div class="met">
+<div class="mc"><div class="v" style="color:var(--green)">&plusmn;5%</div><div class="l">1-Day Accuracy Target</div></div>
+<div class="mc"><div class="v" style="color:var(--accent)">&plusmn;10%</div><div class="l">7-Day Accuracy Target</div></div>
+<div class="mc"><div class="v" style="color:var(--orange)">&plusmn;15-20%</div><div class="l">30-Day Accuracy Target</div></div>
+<div class="mc"><div class="v" style="color:var(--purple)">&lt;2s</div><div class="l">Inference Latency</div></div>
+</div>
+</section>
+<div class="sep"></div>
+
+<!-- S7: ARCHITECTURE -->
+<section id="architecture" class="fin">
+<span class="slabel">Section 07</span>
+<h2>Azure Fabric Architecture</h2>
+<p class="lead">All analysis within Microsoft Fabric. AI system outside core reservation flows. MongoDB Atlas &rarr; Fabric mirroring. Azure OpenAI as the LLM intelligence layer.</p>
+<h3>End-to-End Architecture</h3>
+<div class="arch">
+<div class="aflow">
+<div class="anode"><div class="abox" style="border-color:var(--green)"><div class="ai">&#x1F5C4;</div><div class="at">Data Sources</div><div class="as">IRS MongoDB<br>IARS Database<br>GOS Gate System<br>External (P2)</div></div></div>
+<div class="aarr">&#x2192;</div>
+<div class="anode"><div class="abox" style="border-color:var(--cyan)"><div class="ai">&#x1F504;</div><div class="at">Fabric Integration</div><div class="as">Mirrored DB (CDC)<br>Data Factory ETL<br>OneLake Delta<br>Bronze/Silver/Gold</div></div></div>
+<div class="aarr">&#x2192;</div>
+<div class="anode"><div class="abox" style="border-color:var(--accent)"><div class="ai">&#x1F527;</div><div class="at">Processing &amp; Features</div><div class="as">Spark Notebooks<br>Feature Engineering<br>Data Warehouse<br>MLflow</div></div></div>
+<div class="aarr">&#x2192;</div>
+<div class="anode"><div class="abox" style="border-color:var(--purple)"><div class="ai">&#x1F916;</div><div class="at">ML Models</div><div class="as">Standing Util<br>Recurring Industry<br>Spot Market<br>Anomaly Detection</div></div></div>
+<div class="aarr">&#x2192;</div>
+<div class="anode"><div class="abox" style="border-color:var(--gold)"><div class="ai">&#x2728;</div><div class="at">Azure OpenAI</div><div class="as">Narrative Gen<br>Validation<br>Chat (P3)<br>What-If (P3)</div></div></div>
+<div class="aarr">&#x2192;</div>
+<div class="anode"><div class="abox" style="border-color:var(--orange)"><div class="ai">&#x1F4CA;</div><div class="at">Analytics &amp; Users</div><div class="as">Power BI<br>Operator Approval<br>Feedback Capture<br>Alert System</div></div></div>
+</div>
+</div>
+<h3>Layer Breakdown</h3>
+<div class="grid">
+<div class="card" style="border-color:var(--green)"><h4 style="color:var(--green)">Data Sources</h4><p><strong>IRS MongoDB:</strong> Reservations, waybills<br><strong>IARS:</strong> Allocations, operator decisions<br><strong>GOS:</strong> Gate in/out (ground truth)<br><strong>External (P2):</strong> Weather, events</p></div>
+<div class="card" style="border-color:var(--cyan)"><h4 style="color:var(--cyan)">Data Integration</h4><p><strong>Mirrored DB:</strong> Near-real-time CDC<br><strong>Data Factory:</strong> Incremental ETL<br><strong>OneLake:</strong> Bronze &rarr; Silver &rarr; Gold<br><strong>Quality:</strong> Automated validation</p></div>
+<div class="card" style="border-color:var(--accent)"><h4 style="color:var(--accent)">Processing</h4><p><strong>Notebooks:</strong> Cleaning, validation<br><strong>Features:</strong> Velocity, seasonality, patterns<br><strong>DWH:</strong> Feature tables, training data<br><strong>MLflow:</strong> Experiments, registry</p></div>
+<div class="card" style="border-color:var(--purple)"><h4 style="color:var(--purple)">ML Models</h4><p><strong>Standing:</strong> Customer utilization models<br><strong>Recurring:</strong> Time series models<br><strong>Spot:</strong> Ensemble methods<br><strong>SHAP:</strong> Explainability per prediction</p></div>
+<div class="card" style="border-color:var(--gold)"><h4 style="color:var(--gold)">Azure OpenAI (LLM)</h4><p><strong>Narratives:</strong> SHAP &rarr; explanations<br><strong>Validation:</strong> Business logic checks<br><strong>Chat (P3):</strong> RAG-powered queries<br><strong>Scenarios (P3):</strong> What-if analysis</p></div>
+<div class="card" style="border-color:var(--orange)"><h4 style="color:var(--orange)">Analytics</h4><p><strong>Power BI:</strong> Predictions vs actuals<br><strong>Alerts:</strong> Anomaly, threshold monitoring<br><strong>Feedback:</strong> Accept/reject &rarr; retrain<br><strong>Audit:</strong> Complete decision trail</p></div>
+</div>
+<h3>Data Flows</h3>
+<div class="two"><div>
+<h4>Batch (Daily/Weekly)</h4>
+<div class="cb"><span class="k">BATCH FLOW:</span>
+IRS/IARS/GOS &rarr; Data Factory
+ &rarr; OneLake (Bronze/Silver/Gold)
+ &rarr; Feature Engineering
+ &rarr; ML Training (periodic)
+ &rarr; Batch Predictions
+ &rarr; <span class="s">Azure OpenAI Narratives</span>
+ &rarr; Power BI &rarr; Operators</div>
+</div><div>
+<h4>Real-time Inference</h4>
+<div class="cb"><span class="k">INFERENCE FLOW:</span>
+User Request
+ &rarr; Fetch Features from DWH
+ &rarr; 3 Models in Parallel
+ &rarr; Recommendation Engine
+ &rarr; <span class="s">Azure OpenAI Explain</span>
+ &rarr; Power BI &rarr; Operator</div>
+</div></div>
+</section>
+<div class="sep"></div>
+<!-- S8: PHASES -->
+<section id="phases" class="fin">
+<span class="slabel">Section 08</span>
+<h2>Phase Scope &amp; Deliverables</h2>
+<p class="lead">Detailed scope for each phase with success criteria and go/no-go decisions at each gate.</p>
+
+<div class="phase p0">
+<span class="ptag c">Phase 0 &mdash; Data Discovery &amp; Validation</span>
+
+<p>Validate data availability, quality, and feasibility. Measure current baseline. De-risk Phase 1.</p>
+<div class="tw"><table>
+<thead><tr><th>Task</th><th>Deliverables</th></tr></thead>
+<tbody>
+<tr><td><strong>Data Extraction &amp; Profiling</strong> &mdash; 6-12 months from IRS MongoDB, IARS, GOS</td><td>Data profiling report, data dictionary</td></tr>
+<tr><td><strong>Load Type Segmentation</strong> &mdash; standings vs. recurring vs. spot predictability</td><td>Load type composition, predictability heatmap</td></tr>
+<tr><td><strong>Baseline Measurement</strong> &mdash; current manual accuracy (MAE, MAPE). Interview operators.</td><td>Baseline metrics, operator interview summary</td></tr>
+<tr><td><strong>Customer &amp; Standby Data Check</strong></td><td>Data availability assessment</td></tr>
+<tr><td><strong>POC Forecast Prototype</strong> &mdash; simple model on sample data vs. naive baseline</td><td>POC notebook, accuracy comparison</td></tr>
+<tr><td><strong>Phase 1 Planning</strong> &mdash; revised estimate, go/no-go</td><td>Go/No-Go recommendation</td></tr>
+</tbody></table></div>
+<div class="alert s"><span class="ai2">&#x2705;</span><div><strong>Success Criteria:</strong> Data completeness &gt;80%. &gt;50% volume predictable. POC beats naive by &gt;10%. Clear Phase 1 path.</div></div>
+</div>
+
+<div class="phase p1">
+<span class="ptag g">Phase 1 MVP &mdash; Demand Forecasting + Recommendations</span>
+
+<p>Production-ready forecasting with decomposed modeling, Azure OpenAI explainability, operator feedback, Power BI dashboards.</p>
+<div class="tw"><table>
+<thead><tr><th>Task</th><th>Details</th></tr></thead>
+<tbody>
+<tr><td><strong>ETL Pipeline</strong> (MongoDB &rarr; Fabric)</td><td>Integration, extraction, transformation, scheduling, quality monitoring</td></tr>
+<tr><td><strong>Decomposed Forecasting Models</strong></td><td>Standing util, recurring, spot models. Algorithm selection from Phase 0 findings.</td></tr>
+<tr><td><strong>Recommendation Engine</strong></td><td>Forecast &rarr; open-space logic. Safety buffer. Component aggregation.</td></tr>
+<tr><td><strong>Explainability + Azure OpenAI</strong></td><td>SHAP generation. LLM narrative conversion. Output validation.</td></tr>
+<tr><td><strong>Feedback Capture</strong></td><td>Accept/reject/modify. Component-level feedback routing.</td></tr>
+<tr><td><strong>Power BI Dashboard</strong></td><td>Predictions vs actuals, terminal performance, accuracy tracking.</td></tr>
+<tr><td><strong>Testing &amp; Validation</strong></td><td>Backtesting, shadow mode, UAT with operators.</td></tr>
+<tr><td><strong>Documentation</strong></td><td>Architecture, user guides, model cards, runbooks.</td></tr>
+</tbody></table></div>
+<div class="alert s"><span class="ai2">&#x2705;</span><div><strong>Success Criteria:</strong> MAE &lt;10%. Acceptance rate &gt;70%. Dashboard used weekly. Documented improvement over baseline.</div></div>
+</div>
+
+<div class="phase p2">
+<span class="ptag p">Phase 2 &mdash; Automation + Alerts + Customer Insights</span>
+
+<div class="grid">
+<div class="card"><h4>Rule-Based Automation</h4><p>Configurable rule engine. Automated open-space adjustments with human approval. Audit trail.</p></div>
+<div class="card"><h4>Anomaly Detection &amp; Alerts</h4><p>ML-based anomaly detection. Configurable alert routing. Real-time monitoring.</p></div>
+<div class="card"><h4>Customer-Level Forecasting</h4><p>Top 20 accounts. Customer reliability scoring. Per-customer no-show prediction.</p></div>
+<div class="card"><h4>Standby Optimization</h4><p>Fulfillment prediction. Queue prioritization. Revenue opportunity identification.</p></div>
+<div class="card"><h4>Real-Time Integration</h4><p>Train position and ETA data. Dynamic prediction updates. Sub-hour latency.</p></div>
+<div class="card"><h4>Advanced Feedback</h4><p>Automated retraining. Contextual bandits for model selection. Terminal-specific bias correction.</p></div>
+</div>
+<div class="alert s"><span class="ai2">&#x2705;</span><div><strong>Success Criteria:</strong> Rules handling &gt;50% routine adjustments. Anomaly detection &gt;80%. Customer accuracy &plusmn;10% for top 20.</div></div>
+</div>
+
+<div class="phase p3">
+<span class="ptag o">Phase 3 &mdash; Intelligence Layer</span>
+
+<div class="grid">
+<div class="card"><h4>Chat Interface (Azure OpenAI)</h4><p>Natural-language queries with RAG over prediction data. Mobile-friendly.</p></div>
+<div class="card"><h4>What-If Scenarios</h4><p>LLM-orchestrated pipeline re-runs. Impact summarization in natural language.</p></div>
+<div class="card"><h4>Kafka Streaming</h4><p>Sub-second ingestion. Dynamic prediction updates. 1000+ events/sec.</p></div>
+<div class="card"><h4>Dynamic Prioritization</h4><p>Revenue-based allocation during constraints. Contract-aware optimization.</p></div>
+</div>
+<div class="alert s"><span class="ai2">&#x2705;</span><div><strong>Success Criteria:</strong> Chat accurate. Real-time &lt;5 min latency. Scenario analysis operational.</div></div>
+</div>
+</section>
+<div class="sep"></div>
+<!-- S9: FUNCTIONAL REQ & REPORTING -->
+<section id="reporting" class="fin">
+<span class="slabel">Section 09</span>
+<h2>Functional Requirements &amp; Reporting</h2>
+<p class="lead">Six functional capability areas with reporting outputs.</p>
+<div class="tabs">
+<div class="tnav">
+<button class="tbtn on" onclick="st(event,'f1')">Open Queue</button>
+<button class="tbtn" onclick="st(event,'f2')">Forecasting</button>
+<button class="tbtn" onclick="st(event,'f3')">Standby</button>
+<button class="tbtn" onclick="st(event,'f4')">Human-in-Loop</button>
+<button class="tbtn" onclick="st(event,'f5')">Alerts</button>
+<button class="tbtn" onclick="st(event,'f6')">Chat (LLM)</button>
+</div>
+<div id="f1" class="tpan on">
+<h3>Open Queue Automation (Phase 2)</h3>
+<div class="cb"><span class="k">RULE 1: HIGH UTIL</span> IF net_util > threshold for N days &rarr; ADD opens
+<span class="k">RULE 2: LOW UTIL</span> IF net_util < threshold for N days &rarr; REDUCE opens
+<span class="k">RULE 3: PEAK</span> IF peak_season AND factor > threshold &rarr; ADD +Z%
+<span class="k">RULE 4: HOLIDAY</span> IF near_holiday AND hist_drop > threshold &rarr; REDUCE
+<span class="k">RULE 5: UNDERUSE</span> IF standing_util < threshold for 30d &rarr; FLAG
+<span class="k">RULE 6: NO-SHOW</span> IF noshow_rate > threshold &rarr; Allow overbook
+
+<span class="c">// All thresholds fully configurable per terminal/train/tier</span>
+<span class="c">// Human approval required initially</span></div>
+</div>
+<div id="f2" class="tpan">
+<h3>AI Demand Forecasting (Phase 1)</h3>
+<div class="two"><div>
+<h4>Standing Demand</h4>
+<div class="cl">
+<div class="cli"><span class="ci g">&#10003;</span><span>Per-customer utilization prediction</span></div>
+<div class="cli"><span class="ci g">&#10003;</span><span>Customer reliability scoring</span></div>
+<div class="cli"><span class="ci g">&#10003;</span><span>Waybill-to-ingate lag modeling</span></div>
+<div class="cli"><span class="ci g">&#10003;</span><span>Under-utilization flagging</span></div>
+</div></div><div>
+<h4>Open Demand</h4>
+<div class="cl">
+<div class="cli"><span class="ci g">&#10003;</span><span>Net demand = Gross &times; (1 &minus; no-show)</span></div>
+<div class="cli"><span class="ci g">&#10003;</span><span>Day/season/holiday modeling</span></div>
+<div class="cli"><span class="ci g">&#10003;</span><span>1/7/30-day horizons</span></div>
+<div class="cli"><span class="ci g">&#10003;</span><span>Confidence intervals</span></div>
+</div></div></div>
+</div>
+<div id="f3" class="tpan">
+<h3>Standby/Waitlist Insights (Phase 2)</h3>
+<div class="grid">
+<div class="card"><h4>Volume Analysis</h4><p>Queue depth per train/terminal. Chronic overflow = revenue opportunity.</p></div>
+<div class="card"><h4>Fulfillment Rates</h4><p>% standby filled. High conversion = capacity adjustment signal.</p></div>
+<div class="card"><h4>Customer Patterns</h4><p>Who lands on standby? Premium vs. open? Drives prioritization.</p></div>
+<div class="card"><h4>Standby Prediction</h4><p>Forecast queue depth 1-3 days ahead. Proactive open space addition.</p></div>
+</div>
+</div>
+<div id="f4" class="tpan">
+<h3>Human-in-the-Loop (Phase 1)</h3>
+<div class="cl">
+<div class="cli"><span class="ci g">&#10003;</span><span><strong>Queue:</strong> Pending recommendations with confidence, ML + LLM explanation</span></div>
+<div class="cli"><span class="ci g">&#10003;</span><span><strong>Actions:</strong> Approve | Modify (with reason) | Reject (reason required)</span></div>
+<div class="cli"><span class="ci g">&#10003;</span><span><strong>Component Feedback:</strong> Which component was wrong? Targeted model improvement.</span></div>
+<div class="cli"><span class="ci g">&#10003;</span><span><strong>Tracking:</strong> Acceptance rates by terminal, operator, type &mdash; trust progress.</span></div>
+</div>
+</div>
+<div id="f5" class="tpan">
+<h3>Alerts &amp; Insights (Phase 2)</h3>
+<div class="tw"><table>
+<thead><tr><th>Alert</th><th>Method</th><th>Trigger</th><th>Action</th></tr></thead>
+<tbody>
+<tr><td><strong>Utilization Spike</strong></td><td>Anomaly + Z-Score</td><td>&gt;2 std dev</td><td>Capacity review</td></tr>
+<tr><td><strong>Overbooking Risk</strong></td><td>Threshold</td><td>Net &gt;95% capacity</td><td>Reduction warning</td></tr>
+<tr><td><strong>No-Show Spike</strong></td><td>Changepoint</td><td>Shift &gt;15%</td><td>Standing review</td></tr>
+<tr><td><strong>Standby Overflow</strong></td><td>Queue Monitor</td><td>Predicted overflow</td><td>Add opens</td></tr>
+<tr><td><strong>Demand Shift</strong></td><td>Changepoint</td><td>Trend change</td><td>Model retrain</td></tr>
+</tbody></table></div>
+</div>
+<div id="f6" class="tpan">
+<h3>Chat Interface &mdash; Azure OpenAI (Phase 3)</h3>
+<div class="grid">
+<div class="card"><h4>Example Queries</h4><p>"Demand for I010 next Monday?"<br>"Highest no-show at BP?"<br>"Add opens for Thanksgiving?"<br>"Compare utilization to last year."</p></div>
+<div class="card"><h4>Technical Approach</h4><p>Azure OpenAI + RAG over prediction data. Grounded responses with citations. Mobile-friendly.</p></div>
+<div class="card"><h4>What-If Scenarios</h4><p>"What if UPS reduces standing by 20?"<br>Pipeline re-run + LLM impact summary.</p></div>
+</div>
+</div>
+</div>
+<h3>Power BI Dashboards</h3>
+<div class="grid">
+<div class="card"><h4>Operator Dashboard</h4><p>Today's recommendations, component breakdown, LLM explanations, accept/reject, historical accuracy.</p></div>
+<div class="card"><h4>Manager Dashboard</h4><p>Terminal comparison, accuracy trends (MAE/MAPE), acceptance rates, utilization trends.</p></div>
+<div class="card"><h4>Analytics Dashboard</h4><p>Model performance by component, feature importance, confidence distribution, error analysis.</p></div>
+<div class="card"><h4>Demand Forecast View</h4><p>Net arrivals forecast, gross vs. net, 7-day horizon, confidence bands, terminal filtering.</p></div>
+</div>
+</section>
+<div class="sep"></div>
+
+<!-- S10: MOCKUPS -->
+<section id="mockups" class="fin">
+<span class="slabel">Section 10</span>
+<h2>UI Mockups</h2>
+<p class="lead">Representative operator interfaces with LLM-generated explanations.</p>
+<h3>Recommendation Queue</h3>
+<div class="mock">
+<div class="mtbar"><span class="mdot r"></span><span class="mdot y"></span><span class="mdot g"></span><span style="flex:1;text-align:center;font-size:11.5px;color:var(--text2)">Power BI &mdash; AI Recommendation Queue</span></div>
+<div class="mcont">
+<div style="background:var(--bg3);border-radius:8px;padding:16px;margin-bottom:12px">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><div><strong style="color:var(--text);font-size:15px">Train I010 &mdash; BP &rarr; Pt. Newark</strong><div style="font-size:11.5px;color:var(--text2)">Mon Feb 17 @ 14:30</div></div><span style="background:rgba(0,214,143,.12);color:var(--green2);padding:3px 10px;border-radius:100px;font-size:11px;font-weight:700">HIGH CONFIDENCE</span></div>
+<div style="background:rgba(0,214,143,.06);border-radius:6px;padding:10px;margin-bottom:10px"><strong style="color:var(--green)">ADD +15 Open Spaces</strong><div style="font-size:12.5px;color:var(--text2);margin-top:4px">Current: 120+60=180 | Rec: 120+75=195</div></div>
+<div style="font-size:12.5px;color:var(--text2);padding:8px;background:rgba(255,215,0,.04);border-radius:6px;border-left:3px solid var(--gold);margin-bottom:10px"><strong style="color:var(--gold)">&#x2728; AI Explanation:</strong> Monday demand averages 195 net arrivals. Standing at 92% utilization. ABC Mfg weekly shipment (~40 containers). 5 standby requests = unmet demand.</div>
+<div style="font-size:12px;color:var(--text2)"><strong>Components:</strong> Standing: 110 | Recurring: 40 | Spot: 45&plusmn;20</div>
+<div style="display:flex;gap:8px;margin-top:10px">
+<button style="background:var(--green);color:#000;border:none;padding:7px 18px;border-radius:5px;font-weight:700;font-size:12px;cursor:pointer">&#x2713; Approve</button>
+<button style="background:var(--orange);color:#000;border:none;padding:7px 18px;border-radius:5px;font-weight:700;font-size:12px;cursor:pointer">&#x270E; Modify</button>
+<button style="background:var(--red);color:#fff;border:none;padding:7px 18px;border-radius:5px;font-weight:700;font-size:12px;cursor:pointer">&#x2717; Reject</button>
+</div></div>
+<div style="background:var(--bg3);border-radius:8px;padding:16px">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><div><strong style="color:var(--text);font-size:15px">Train M209 &mdash; Louisville &rarr; BP</strong><div style="font-size:11.5px;color:var(--text2)">Mon Feb 17 @ 07:15</div></div><span style="background:rgba(255,160,51,.12);color:var(--orange);padding:3px 10px;border-radius:100px;font-size:11px;font-weight:700">MEDIUM CONFIDENCE</span></div>
+<div style="background:rgba(255,160,51,.06);border-radius:6px;padding:10px;margin-bottom:10px"><strong style="color:var(--orange)">REDUCE &minus;10 Open Spaces</strong><div style="font-size:12.5px;color:var(--text2);margin-top:4px">Current: 120+40=160 | Rec: 120+30=150</div></div>
+<div style="font-size:12.5px;color:var(--text2);padding:8px;background:rgba(255,215,0,.04);border-radius:6px;border-left:3px solid var(--gold);margin-bottom:10px"><strong style="color:var(--gold)">&#x2728; AI Explanation:</strong> Presidents Day holiday &mdash; 15% historical drop. Only 2 waybills (typical: 8+) = high no-show probability. Lower confidence: limited holiday data.</div>
+<div style="display:flex;gap:8px;margin-top:10px">
+<button style="background:var(--green);color:#000;border:none;padding:7px 18px;border-radius:5px;font-weight:700;font-size:12px;cursor:pointer">&#x2713; Approve</button>
+<button style="background:var(--orange);color:#000;border:none;padding:7px 18px;border-radius:5px;font-weight:700;font-size:12px;cursor:pointer">&#x270E; Modify</button>
+<button style="background:var(--red);color:#fff;border:none;padding:7px 18px;border-radius:5px;font-weight:700;font-size:12px;cursor:pointer">&#x2717; Reject</button>
+</div></div>
+</div></div>
+<h3>Demand Forecast Dashboard</h3>
+<div class="mock">
+<div class="mtbar"><span class="mdot r"></span><span class="mdot y"></span><span class="mdot g"></span><span style="flex:1;text-align:center;font-size:11.5px;color:var(--text2)">Power BI &mdash; Demand Forecast</span></div>
+<div class="mcont">
+<div style="background:var(--bg3);border-radius:8px;padding:18px;margin-bottom:14px">
+<div style="font-size:12.5px;font-weight:600;color:var(--text);margin-bottom:14px">Net Arrivals Forecast &mdash; 7 Days <span style="font-weight:400;color:var(--text2)">(after no-show adjustment)</span></div>
+<div style="display:flex;align-items:flex-end;gap:4px;height:100px;padding-bottom:6px;border-bottom:1px solid var(--border)">
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><div style="width:100%;height:100px;position:relative"><div style="position:absolute;bottom:0;width:100%;height:85px;background:var(--accent);opacity:.6;border-radius:3px 3px 0 0"></div><div style="position:absolute;bottom:0;width:100%;height:55px;background:var(--green);border-radius:3px 3px 0 0"></div></div><div style="font-size:9px;color:var(--text2)">Mon</div></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><div style="width:100%;height:100px;position:relative"><div style="position:absolute;bottom:0;width:100%;height:78px;background:var(--accent);opacity:.6;border-radius:3px 3px 0 0"></div><div style="position:absolute;bottom:0;width:100%;height:50px;background:var(--green);border-radius:3px 3px 0 0"></div></div><div style="font-size:9px;color:var(--text2)">Tue</div></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><div style="width:100%;height:100px;position:relative"><div style="position:absolute;bottom:0;width:100%;height:96px;background:var(--accent);opacity:.6;border-radius:3px 3px 0 0"></div><div style="position:absolute;bottom:0;width:100%;height:66px;background:var(--green);border-radius:3px 3px 0 0"></div></div><div style="font-size:9px;color:var(--text2)">Wed</div></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><div style="width:100%;height:100px;position:relative"><div style="position:absolute;bottom:0;width:100%;height:88px;background:var(--accent);opacity:.6;border-radius:3px 3px 0 0"></div><div style="position:absolute;bottom:0;width:100%;height:56px;background:var(--green);border-radius:3px 3px 0 0"></div></div><div style="font-size:9px;color:var(--text2)">Thu</div></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><div style="width:100%;height:100px;position:relative"><div style="position:absolute;bottom:0;width:100%;height:80px;background:var(--accent);opacity:.6;border-radius:3px 3px 0 0"></div><div style="position:absolute;bottom:0;width:100%;height:52px;background:var(--green);border-radius:3px 3px 0 0"></div></div><div style="font-size:9px;color:var(--text2)">Fri</div></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><div style="width:100%;height:100px;position:relative"><div style="position:absolute;bottom:0;width:100%;height:50px;background:var(--accent);opacity:.6;border-radius:3px 3px 0 0"></div><div style="position:absolute;bottom:0;width:100%;height:36px;background:var(--green);border-radius:3px 3px 0 0"></div></div><div style="font-size:9px;color:var(--text2)">Sat</div></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><div style="width:100%;height:100px;position:relative"><div style="position:absolute;bottom:0;width:100%;height:44px;background:var(--accent);opacity:.6;border-radius:3px 3px 0 0"></div><div style="position:absolute;bottom:0;width:100%;height:30px;background:var(--green);border-radius:3px 3px 0 0"></div></div><div style="font-size:9px;color:var(--text2)">Sun</div></div>
+</div>
+<div style="display:flex;gap:16px;margin-top:8px;font-size:11px"><span style="color:var(--accent)">&#x25A0; Gross Reservations</span><span style="color:var(--green)">&#x25A0; Net Arrivals</span></div>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+<div style="background:var(--bg3);border-radius:8px;padding:14px"><div style="font-size:11px;color:var(--text2)">Net Forecast Accuracy (30d)</div><div style="font-size:22px;font-weight:800;color:var(--green)">92.3%</div></div>
+<div style="background:var(--bg3);border-radius:8px;padding:14px"><div style="font-size:11px;color:var(--text2)">Avg Net Utilization</div><div style="font-size:22px;font-weight:800;color:var(--accent2)">78.4%</div></div>
+</div></div></div>
+</section>
+<div class="sep"></div>
+
+<!-- S11: NFR -->
+<section id="nfr" class="fin">
+<span class="slabel">Section 11</span>
+<h2>Non-Functional Requirements</h2>
+<div class="tw"><table>
+<thead><tr><th>Requirement</th><th>Specification</th><th>Implementation</th></tr></thead>
+<tbody>
+<tr><td><strong>Reliability</strong></td><td>99.5% uptime. Graceful degradation to rule engine</td><td>Auto-scaling endpoints. Health monitoring. Fallback always available.</td></tr>
+<tr><td><strong>Audit Logging</strong></td><td>Every recommendation, action, decision logged</td><td>Immutable audit trail with timestamps, users, reasons.</td></tr>
+<tr><td><strong>Latency</strong></td><td>Single prediction &lt;2s. Batch &lt;10min. Dashboard &lt;5s</td><td>Pre-warmed models. Cached predictions. Incremental refresh.</td></tr>
+<tr><td><strong>Security</strong></td><td>Encryption at rest/transit. SSO. Network isolation</td><td>TLS 1.3. Azure Key Vault. Azure AD integration.</td></tr>
+<tr><td><strong>RBAC</strong></td><td>Role-based by terminal/region/function</td><td>Azure AD groups. Roles: viewer, operator, admin, data scientist.</td></tr>
+<tr><td><strong>Scalability</strong></td><td>32 terminals now, 40+ without changes</td><td>Horizontal auto-scaling. Per-terminal models. Fabric scaling.</td></tr>
+<tr><td><strong>Monitoring</strong></td><td>Drift detection. Pipeline health. Performance</td><td>MLflow monitoring. Alerts on &gt;15% accuracy degradation.</td></tr>
+</tbody></table></div>
+</section>
+<div class="sep"></div>
+
+<!-- S12: QUICKSTART -->
+<section id="quickstart" class="fin">
+<span class="slabel">Section 12</span>
+<h2>Quick Start: One Train POC</h2>
+<p class="lead">Bedford Park terminal, Train I010 &mdash; 2-TBD to show tangible results.</p>
+<div class="alert s"><span class="ai2">&#x1F680;</span><div><strong>POC:</strong> 3 years of I010 data. Baseline model, customer no-show rates, sample recommendations with LLM explainability, backtested against actuals.</div></div>
+<div class="grid">
+<div class="card"><h4>Historical Pattern Report</h4><p>Day-of-week curves, seasonal trends, holiday impacts, no-show distributions.</p></div>
+<div class="card"><h4>Baseline Prediction</h4><p>1/7-day forecasts with backtested accuracy vs. actual outcomes.</p></div>
+<div class="card"><h4>Customer Reliability</h4><p>Per-customer INGAT/NOSHW ratios. Most/least reliable shippers.</p></div>
+<div class="card"><h4>10 Sample Recommendations</h4><p>With LLM explanations. Compared to what operators did vs. model recommendation.</p></div>
+</div>
+</section>
+<div class="sep"></div>
+<!-- S13: QUESTIONS -->
+<section id="questions" class="fin">
+<span class="slabel">Section 13</span>
+<h2>Customer Discovery Questions</h2>
+<p class="lead">Organized by category. Green = ask first, Blue = ask second. Top 5 Critical Questions must be answered to finalize scope.</p>
+<div class="alert w"><span class="ai2">&#x26A0;</span><div><strong>Top 5 Critical Questions</strong> must be answered during the initial meeting. Answers determine modeling approach, success criteria, and prioritization.</div></div>
+<div class="tabs">
+<div class="tnav">
+<button class="tbtn on" onclick="st(event,'qt5')">&#x2B50; Top 5 Critical</button>
+<button class="tbtn" onclick="st(event,'qd')">Data Access</button>
+<button class="tbtn" onclick="st(event,'qb')">Business Rules</button>
+<button class="tbtn" onclick="st(event,'qtc')">Technical</button>
+<button class="tbtn" onclick="st(event,'qsc')">Success Criteria</button>
+<button class="tbtn" onclick="st(event,'qa')">Additional</button>
+</div>
+<div id="qt5" class="tpan on">
+<div class="cl">
+<div class="cli"><span class="ci g">1</span><span><strong>What ONE capability delivers the most business value in Phase 1?</strong><br><span style="color:var(--text2)">(A) Demand forecasts, (B) Automated adjustments, (C) Proactive alerts, (D) Dashboards. Determines Phase 1 scope.</span></span></div>
+<div class="cli"><span class="ci g">2</span><span><strong>What % of volume is standings vs. recurring vs. spot?</strong><br><span style="color:var(--text2)">80% predictable = &plusmn;5% accuracy. 50% unpredictable = &plusmn;15% best case. Sets success metrics.</span></span></div>
+<div class="cli"><span class="ci g">3</span><span><strong>Current manual planning accuracy baseline?</strong><br><span style="color:var(--text2)">How often off by &plusmn;10, &plusmn;20, &plusmn;50 containers? What error rate makes AI trustworthy?</span></span></div>
+<div class="cli"><span class="ci g">4</span><span><strong>Can we segment data by load type? Do standby/cancellation/no-show data exist?</strong><br><span style="color:var(--text2)">Required for decomposed modeling. Missing data defers features to Phase 2+.</span></span></div>
+<div class="cli"><span class="ci g">5</span><span><strong>Phase 1: AI recommendations (human approves) or rule-based automation?</strong><br><span style="color:var(--text2)">Recommendations = lower risk, faster. Rules = immediate time savings. Both = doubles scope.</span></span></div>
+</div></div>
+<div id="qd" class="tpan">
+<div class="cl">
+<div class="cli"><span class="ci g">1</span><span><strong>Read-only access to IARS MongoDB?</strong> Direct query, export, or Fabric mirroring?</span></div>
+<div class="cli"><span class="ci g">2</span><span><strong>INGAT/NOSHW data quality?</strong> Reliably set? How far back is data clean?</span></div>
+<div class="cli"><span class="ci g">3</span><span><strong>GOS gate-in/out data?</strong> Separate system? Linkage to reservations?</span></div>
+<div class="cli"><span class="ci g">4</span><span><strong>6-12 months sample data for Phase 0?</strong></span></div>
+<div class="cli"><span class="ci b">5</span><span><strong>Schema documentation?</strong> Field definitions, enum values?</span></div>
+<div class="cli"><span class="ci b">6</span><span><strong>RTOP real-time train ETA access?</strong> (Phase 2)</span></div>
+<div class="cli"><span class="ci b">7</span><span><strong>Cross-system linkage?</strong> IARS, IRS, GOS common keys?</span></div>
+</div></div>
+<div id="qb" class="tpan">
+<div class="cl">
+<div class="cli"><span class="ci g">1</span><span><strong>Who approves capacity changes?</strong> Operators or regional? Turnaround?</span></div>
+<div class="cli"><span class="ci g">2</span><span><strong>Are standings contractual?</strong> Can they be adjusted? Process?</span></div>
+<div class="cli"><span class="ci g">3</span><span><strong>No-show/misuse:</strong> Actions when customers systematically no-show?</span></div>
+<div class="cli"><span class="ci g">4</span><span><strong>Current operator rules?</strong> (e.g., "If util &gt;90%, add 10 slots")</span></div>
+<div class="cli"><span class="ci b">5</span><span><strong>Hard limits?</strong> Max changes per decision? Labor constraints?</span></div>
+<div class="cli"><span class="ci b">6</span><span><strong>Pilot terminal?</strong> Most receptive operators?</span></div>
+<div class="cli"><span class="ci b">7</span><span><strong>Replace or augment</strong> manual rules with AI?</span></div>
+</div></div>
+<div id="qtc" class="tpan">
+<div class="cl">
+<div class="cli"><span class="ci g">1</span><span><strong>Azure/Fabric environment?</strong> Provisioned or needs setup? Capacity SKU?</span></div>
+<div class="cli"><span class="ci g">2</span><span><strong>Recommendation delivery?</strong> IARS UI, Power BI, email, API?</span></div>
+<div class="cli"><span class="ci g">3</span><span><strong>MongoDB &rarr; Fabric mirroring:</strong> configured or part of our scope?</span></div>
+<div class="cli"><span class="ci b">4</span><span><strong>Mirroring latency?</strong> Real-time alerts feasible or batch?</span></div>
+<div class="cli"><span class="ci b">5</span><span><strong>Kafka needed?</strong> When streaming vs. batch?</span></div>
+<div class="cli"><span class="ci b">6</span><span><strong>Production ownership?</strong> Handoff, hybrid, or ongoing?</span></div>
+</div></div>
+<div id="qsc" class="tpan">
+<div class="cl">
+<div class="cli"><span class="ci g">1</span><span><strong>What's a "win"?</strong> Utilization %? Accuracy? Manual reduction?</span></div>
+<div class="cli"><span class="ci g">2</span><span><strong>Timeline constraints?</strong> Before peak season?</span></div>
+<div class="cli"><span class="ci g">3</span><span><strong>AI trust threshold?</strong> &plusmn;10 containers? &plusmn;5%? &plusmn;15%?</span></div>
+<div class="cli"><span class="ci b">4</span><span><strong>SME availability</strong> for UAT and feedback?</span></div>
+<div class="cli"><span class="ci b">5</span><span><strong>ROI metric?</strong> Revenue, cost, or utilization?</span></div>
+<div class="cli"><span class="ci b">6</span><span><strong>Ready to trust AI in Phase 1</strong> or start with rules?</span></div>
+</div></div>
+<div id="qa" class="tpan">
+<h4>Customer Granularity</h4>
+<div class="cl">
+<div class="cli"><span class="ci b">&#x25B8;</span><span>How many customers with standings? 10? 100? 1,000?</span></div>
+<div class="cli"><span class="ci b">&#x25B8;</span><span>Customer-level forecasts for all or just top 10-20?</span></div>
+<div class="cli"><span class="ci b">&#x25B8;</span><span>Profitability data available?</span></div>
+</div>
+<h4>Alerts &amp; Workflow</h4>
+<div class="cl">
+<div class="cli"><span class="ci b">&#x25B8;</span><span>What constitutes "abnormal"? (&gt;X% deviation?)</span></div>
+<div class="cli"><span class="ci b">&#x25B8;</span><span>Alert speed: real-time, hourly, daily?</span></div>
+<div class="cli"><span class="ci b">&#x25B8;</span><span>Can all operators override AI or only managers?</span></div>
+<div class="cli"><span class="ci b">&#x25B8;</span><span>Explanation level needed? Charts, NL, feature importance?</span></div>
+</div>
+<h4>Booking Patterns</h4>
+<div class="cl">
+<div class="cli"><span class="ci b">&#x25B8;</span><span>Reservation/waybill lead times?</span></div>
+<div class="cli"><span class="ci b">&#x25B8;</span><span>When do cancellations occur? (&gt;7d, 1-3d, same day?)</span></div>
+<div class="cli"><span class="ci b">&#x25B8;</span><span>No-show rates by customer segment?</span></div>
+</div>
+</div>
+</div>
+</section>
+<div class="sep"></div>
+
+<!-- TERMINOLOGY -->
+<section class="fin">
+<span class="slabel">Reference</span>
+<h2>Key Terminology</h2>
+<div class="tw"><table>
+<thead><tr><th>Term</th><th>Definition</th></tr></thead>
+<tbody>
+<tr><td><strong>Standings</strong></td><td>Fixed capacity allocations for specific customers (reserved whether used or not)</td></tr>
+<tr><td><strong>Open Space</strong></td><td>Variable capacity for non-contracted customers or to fill underutilized standings</td></tr>
+<tr><td><strong>Decomposed Modeling</strong></td><td>Predicting each load type separately then aggregating &mdash; component-level explainability</td></tr>
+<tr><td><strong>INGAT / NOSHW</strong></td><td>Reservation outcomes: INGAT = arrived, NOSHW = no-show (reserved but never arrived)</td></tr>
+<tr><td><strong>Net Effective Demand</strong></td><td>Gross reservations &times; (1 &minus; no-show rate) &mdash; actual containers expected</td></tr>
+<tr><td><strong>IARS / IRS / GOS</strong></td><td>Allocation system / Reservation system (MongoDB) / Gate Operating System (ground truth)</td></tr>
+</tbody></table></div>
+</section>
+
+</div><!-- end wrap -->
+
+<div class="foot">
+<p style="margin:0"><strong>CSX IARS AI Capacity Planning &mdash; 360&deg; Technical Blueprint</strong></p>
+<p style="margin:4px 0 0">February 2026 | Pre-Proposal Phase | Confidential</p>
+<p style="margin:8px 0 0;font-size:11px;color:var(--text2)">Phase 0 &rarr; Phase 1 &rarr; Phase 2 &rarr; Phase 3 | Microsoft Fabric + Azure OpenAI</p>
+</div>
+
+<script>
+function st(e,id){const c=e.target.closest('.tabs');c.querySelectorAll('.tbtn').forEach(b=>b.classList.remove('on'));c.querySelectorAll('.tpan').forEach(p=>p.classList.remove('on'));e.target.classList.add('on');document.getElementById(id).classList.add('on')}
+const ob=new IntersectionObserver(e=>{e.forEach(x=>{if(x.isIntersecting)x.target.classList.add('vis')})},{threshold:.08});
+document.querySelectorAll('.fin').forEach(el=>ob.observe(el));
+</script>
+</body>
+</html>
