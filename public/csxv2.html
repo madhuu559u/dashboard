@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CSX IARS — AI Demand Prediction &amp; Allocation Intelligence</title>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,700;1,6..72,400&family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#06090f;--bg2:#0c1220;--bg3:#131c30;--surface:#162040;--border:#1e3060;--text:#dfe6f0;--text2:#8899b4;--accent:#4f8fff;--accent2:#7cafff;--green:#00d68f;--green2:#33e0a8;--orange:#ffa033;--red:#ff5c5c;--purple:#a07cff;--cyan:#00c9db;--pink:#ff6eb4;--gold:#ffd700;--radius:10px}
+*{margin:0;padding:0;box-sizing:border-box}html{scroll-behavior:smooth}
+body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);line-height:1.72;font-size:15px}
+code,pre,.mono{font-family:'JetBrains Mono',monospace}
+::selection{background:rgba(79,143,255,.3)}
+.topbar{position:sticky;top:0;z-index:100;background:rgba(6,9,15,.88);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:0 28px;display:flex;align-items:center;gap:20px;height:52px;overflow-x:auto}
+.topbar .brand{font-family:'Newsreader',serif;font-weight:700;font-size:17px;color:var(--accent2);white-space:nowrap;letter-spacing:-.3px}
+.topbar a{color:var(--text2);text-decoration:none;font-size:12.5px;font-weight:500;white-space:nowrap;transition:color .15s;letter-spacing:.2px}
+.topbar a:hover{color:var(--accent2)}
+.hero{padding:72px 32px 56px;text-align:center;position:relative;overflow:hidden;background:linear-gradient(165deg,#060a12 0%,#0d1a35 35%,#0f1b30 65%,#08101c 100%)}
+.hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 60% 50% at 25% 30%,rgba(79,143,255,.08),transparent),radial-gradient(ellipse 50% 60% at 75% 70%,rgba(160,124,255,.06),transparent)}
+.hero *{position:relative}
+.hero .tag{display:inline-block;background:rgba(79,143,255,.1);border:1px solid rgba(79,143,255,.25);color:var(--accent2);border-radius:100px;padding:5px 16px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:20px}
+.hero h1{font-family:'Newsreader',serif;font-size:clamp(30px,4.5vw,52px);font-weight:700;line-height:1.15;margin-bottom:14px;color:var(--text)}
+.hero h1 em{font-style:italic;color:var(--accent2)}
+.hero .sub{color:var(--text2);font-size:16.5px;max-width:720px;margin:0 auto 28px;font-weight:300}
+.hero .pills{display:flex;gap:24px;justify-content:center;flex-wrap:wrap;font-size:12.5px;color:var(--text2);font-weight:500}
+.hero .pills span{display:flex;align-items:center;gap:6px}
+.hero .pills .dot{width:6px;height:6px;border-radius:50%}
+.wrap{max-width:1160px;margin:0 auto;padding:0 24px}
+section{padding:56px 0}
+.slabel{display:inline-block;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--accent);margin-bottom:10px}
+h2{font-family:'Newsreader',serif;font-size:30px;font-weight:700;margin-bottom:6px;line-height:1.2;letter-spacing:-.3px}
+h3{font-size:18px;font-weight:700;color:var(--text);margin:28px 0 10px}
+h4{font-size:15px;font-weight:700;color:var(--accent2);margin:16px 0 6px}
+p{margin-bottom:12px;color:var(--text2);font-weight:300}
+.lead{font-size:16px;color:var(--text);margin-bottom:20px;font-weight:300}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px;margin:20px 0}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:22px;transition:border-color .2s}
+.card:hover{border-color:var(--accent)}
+.card h4{margin:0 0 6px;color:var(--text);font-size:15px;font-weight:600}
+.card p{font-size:13.5px;margin:0}
+.tw{overflow-x:auto;margin:18px 0;border-radius:var(--radius);border:1px solid var(--border)}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+thead{background:var(--bg3)}
+th{text-align:left;padding:10px 14px;font-weight:600;color:var(--text);white-space:nowrap;border-bottom:2px solid var(--border);font-size:12.5px;text-transform:uppercase;letter-spacing:.5px}
+td{padding:9px 14px;border-bottom:1px solid rgba(30,48,96,.5);color:var(--text2)}
+tbody tr:hover{background:rgba(79,143,255,.04)}
+.cb{background:#080e1a;border:1px solid var(--border);border-radius:var(--radius);padding:18px 22px;overflow-x:auto;margin:14px 0;font-size:12.5px;line-height:1.85;color:#b0bec5;white-space:pre}
+.cb .c{color:#546e7a}.cb .k{color:#ff8a80}.cb .s{color:#80cbc4}.cb .f{color:#82b1ff}
+.arch{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:32px;margin:20px 0;overflow-x:auto}
+.aflow{display:flex;align-items:stretch;gap:0;min-width:860px}
+.anode{flex:1;text-align:center;padding:16px 8px}
+.abox{background:var(--surface);border:2px solid var(--border);border-radius:var(--radius);padding:14px 10px;min-height:80px;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:border-color .2s}
+.abox:hover{border-color:var(--accent)}
+.abox .ai{font-size:22px;margin-bottom:4px}.abox .at{font-weight:700;font-size:12.5px;color:var(--text)}.abox .as{font-size:10.5px;color:var(--text2);margin-top:3px}
+.aarr{display:flex;align-items:center;justify-content:center;width:36px;flex-shrink:0;color:var(--accent);font-size:18px}
+.met{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin:20px 0}
+.mc{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;text-align:center}
+.mc .v{font-family:'Newsreader',serif;font-size:26px;font-weight:700;margin-bottom:2px}
+.mc .l{font-size:11.5px;color:var(--text2);font-weight:500}
+.tabs{margin:20px 0}.tnav{display:flex;gap:2px;border-bottom:2px solid var(--border);flex-wrap:wrap}
+.tbtn{background:none;border:none;color:var(--text2);padding:9px 18px;font-size:13px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s;font-family:inherit}
+.tbtn:hover{color:var(--text)}.tbtn.on{color:var(--accent2);border-bottom-color:var(--accent2)}
+.tpan{display:none;padding:20px 0}.tpan.on{display:block}
+.cl{margin:14px 0}.cli{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid rgba(30,48,96,.4);font-size:13.5px}
+.cli:last-child{border-bottom:none}
+.ci{width:18px;height:18px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0;margin-top:2px}
+.ci.g{background:rgba(0,214,143,.15);color:var(--green)}.ci.b{background:rgba(79,143,255,.15);color:var(--accent)}.ci.o{background:rgba(255,160,51,.15);color:var(--orange)}.ci.r{background:rgba(255,92,92,.15);color:var(--red)}
+.mock{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin:18px 0}
+.mtbar{background:var(--bg3);padding:8px 14px;display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--border)}
+.mdot{width:9px;height:9px;border-radius:50%}.mdot.r{background:#ff5c5c}.mdot.y{background:#ffa033}.mdot.g{background:#00d68f}
+.mcont{padding:20px}
+.phase{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin:14px 0;position:relative;overflow:hidden}
+.phase::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px}
+.phase.p1::before{background:var(--green)}.phase.p2::before{background:var(--purple)}.phase.p3::before{background:var(--orange)}
+.ptag{display:inline-block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;padding:3px 8px;border-radius:4px;margin-bottom:10px}
+.ptag.g{background:rgba(0,214,143,.12);color:var(--green2)}.ptag.p{background:rgba(160,124,255,.12);color:var(--purple)}.ptag.o{background:rgba(255,160,51,.12);color:var(--orange)}
+.alert{border-radius:var(--radius);padding:14px 18px;margin:14px 0;font-size:13.5px;display:flex;gap:10px;align-items:flex-start}
+.alert.i{background:rgba(79,143,255,.08);border:1px solid rgba(79,143,255,.18)}
+.alert.w{background:rgba(255,160,51,.08);border:1px solid rgba(255,160,51,.18)}
+.alert.s{background:rgba(0,214,143,.08);border:1px solid rgba(0,214,143,.18)}
+.alert.d{background:rgba(255,92,92,.08);border:1px solid rgba(255,92,92,.18)}
+.alert .ai2{font-size:16px;flex-shrink:0}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:20px}@media(max-width:768px){.two{grid-template-columns:1fr}}
+.sep{height:1px;background:linear-gradient(90deg,transparent,var(--border),transparent);margin:40px 0}
+.toc{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin:28px 0}
+.toc h3{margin:0 0 14px;font-size:16px}
+.tocg{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:6px}
+.toc a{color:var(--text2);text-decoration:none;font-size:13px;padding:5px 10px;border-radius:5px;display:flex;align-items:center;gap:7px;transition:all .15s;font-weight:400}
+.toc a:hover{background:rgba(79,143,255,.08);color:var(--accent2)}
+.toc .n{background:var(--bg3);color:var(--accent2);font-size:10px;font-weight:700;width:22px;height:22px;display:flex;align-items:center;justify-content:center;border-radius:5px;flex-shrink:0}
+.schema{background:#080e1a;border:1px solid var(--border);border-radius:var(--radius);padding:18px 22px;margin:14px 0;font-family:'JetBrains Mono',monospace;font-size:12.5px;line-height:1.9;white-space:pre;overflow-x:auto}
+.schema .f{color:#82b1ff}.schema .t{color:#80cbc4}.schema .c{color:#546e7a}.schema .cn{color:#ce93d8;font-weight:600;font-size:14px}
+.foot{background:var(--bg2);border-top:1px solid var(--border);padding:32px;text-align:center;color:var(--text2);font-size:12px}
+.fin{opacity:0;transform:translateY(16px);transition:opacity .5s,transform .5s}.fin.vis{opacity:1;transform:translateY(0)}
+.dim{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;text-align:center;position:relative;overflow:hidden}
+.dim::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.dim.d1::before{background:var(--green)}.dim.d2::before{background:var(--accent)}.dim.d3::before{background:var(--purple)}.dim.d4::before{background:var(--orange)}.dim.d5::before{background:var(--red)}.dim.d6::before{background:var(--cyan)}
+.dim .dt{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
+.dim .dv{font-family:'Newsreader',serif;font-size:20px;font-weight:700;margin-bottom:2px}
+.dim .dd{font-size:12px;color:var(--text2)}
+</style>
+</head>
+<body>
+
+<nav class="topbar">
+<span class="brand">CSX&nbsp;IARS&nbsp;AI</span>
+<a href="#problem">Problem</a><a href="#core">Core Question</a><a href="#temporal">Temporal</a><a href="#prediction">Prediction Engine</a><a href="#explainability">Explainability &amp; LLM</a><a href="#catalog">Predictions Catalog</a><a href="#functional">Functional Req</a><a href="#data">Data</a><a href="#architecture">Architecture</a><a href="#phases">Phases</a><a href="#reporting">Dashboards</a><a href="#mockups">Mockups</a><a href="#nfr">NFR</a><a href="#quickstart">Quick Start</a>
+</nav>
+
+<header class="hero">
+<div class="tag">360° Technical Blueprint — v2</div>
+<h1>CSX IARS <em>AI Demand Prediction</em> &amp; Allocation Intelligence</h1>
+<p class="sub">Predicting how many containers to expect per train per day — anchored on day-of-week patterns, temporal trends, customer behavior, and seasonal intelligence — so the INOC team can make informed, data-driven allocation decisions across ~80 daily originating trains.</p>
+<div class="pills">
+<span><span class="dot" style="background:var(--green)"></span>Pre-Proposal Phase</span>
+<span>Feb 2026</span>
+<span>Intermodal Operations</span>
+<span>Microsoft Fabric</span>
+</div>
+</header>
+
+<div class="wrap">
+
+<div class="toc fin">
+<h3>Document Map</h3>
+<div class="tocg">
+<a href="#problem"><span class="n">01</span>Problem Statement</a>
+<a href="#core"><span class="n">02</span>Core Prediction Question</a>
+<a href="#temporal"><span class="n">03</span>Temporal Dimensions</a>
+<a href="#prediction"><span class="n">04</span>Prediction Engine</a>
+<a href="#explainability"><span class="n">05</span>Explainability &amp; LLM Intelligence</a>
+<a href="#catalog"><span class="n">06</span>Predictions Catalog</a>
+<a href="#functional"><span class="n">07</span>Functional Requirements</a>
+<a href="#data"><span class="n">08</span>Data Requirements</a>
+<a href="#architecture"><span class="n">09</span>Technical Architecture</a>
+<a href="#phases"><span class="n">10</span>Phase Scope</a>
+<a href="#reporting"><span class="n">11</span>Dashboards &amp; Reporting</a>
+<a href="#mockups"><span class="n">12</span>UI Mockups</a>
+<a href="#nfr"><span class="n">13</span>Non-Functional Requirements</a>
+<a href="#quickstart"><span class="n">14</span>Quick Start POC</a>
+</div>
+</div>
+
+<div class="sep"></div>
+
+<!-- ========== S1: PROBLEM ========== -->
+<section id="problem" class="fin">
+<span class="slabel">Section 01</span>
+<h2>Problem Statement</h2>
+<p class="lead">The IARS reservation system does not give operations a true sense of what is actually going to happen. Allocations over-represent demand, standings are underutilized, and every decision today is reactive, manual, and backward-looking.</p>
+
+<div class="grid">
+<div class="card"><h4>Allocations ≠ Reality</h4><p>Standing allocations are set contractually (e.g., 50/day, 7 days/week) even though actual customer behavior varies dramatically by day-of-week. Thursday may use 100% while Monday uses 30%. The reservation system shows "full" when the train is actually half-empty.</p></div>
+<div class="card"><h4>Manual, Reactive Process</h4><p>The INOC (centralized operations team) manually monitors allocations using spreadsheets and institutional knowledge. When they're busy or unavailable, opportunities are simply missed — space that could have been opened goes unused.</p></div>
+<div class="card"><h4>No Forecasting Exists</h4><p>Nobody looks forward. Operators compare this week to last week at best. Year-over-year trends, seasonality, customer shifts, and day-of-week patterns across months are too much data for humans to analyze manually at scale.</p></div>
+<div class="card"><h4>Multi-Hop Response Time</h4><p>When customers need space: customer → sales rep → INOC → evaluation → maybe add space. By the time space is added, the gate cutoff may have passed. Every hour of delay reduces utilization of added space.</p></div>
+</div>
+
+<div class="alert d"><span class="ai2">&#x26A0;</span><div><strong>The fundamental gap:</strong> Operations needs to know <em>"How many containers should I actually expect on this train on this day?"</em> — not what's allocated, not what's reserved, but what will physically arrive at the gate. Today, nobody has that answer until after the fact.</div></div>
+
+<div class="met">
+<div class="mc"><div class="v" style="color:var(--accent)">~80</div><div class="l">Originating Trains / Day</div></div>
+<div class="mc"><div class="v" style="color:var(--green)">~2</div><div class="l">Avg Originating per Terminal</div></div>
+<div class="mc"><div class="v" style="color:var(--orange)">32+</div><div class="l">Terminals Network-wide</div></div>
+<div class="mc"><div class="v" style="color:var(--purple)">250–400+</div><div class="l">Containers per Train (Variable)</div></div>
+</div>
+</section>
+
+<div class="sep"></div>
+
+<!-- ========== S2: CORE PREDICTION QUESTION ========== -->
+<section id="core" class="fin">
+<span class="slabel">Section 02</span>
+<h2>The Core Prediction Question</h2>
+<p class="lead">Everything in this system reduces to one question, asked per train, per day:</p>
+
+<div style="background:linear-gradient(135deg,rgba(79,143,255,.08),rgba(160,124,255,.08));border:2px solid var(--accent);border-radius:var(--radius);padding:28px;text-align:center;margin:20px 0">
+<div style="font-family:'Newsreader',serif;font-size:clamp(20px,3vw,28px);font-weight:700;color:var(--text);line-height:1.3">"For Train I010 departing Bedford Park on Thursday March 5th — <em style="color:var(--accent2)">how many containers should we actually expect?</em>"</div>
+</div>
+
+<p>This is <strong>not</strong> capacity planning. We are not setting train capacity — that is driven by physical constraints (length, weight, tonnage, network). We are predicting <strong>customer demand</strong>: how many containers will physically arrive at the gate for this train on this day.</p>
+
+<h3>Why This Matters to Operations</h3>
+<div class="two"><div>
+<h4>If We Predict Demand Accurately</h4>
+<div class="cl">
+<div class="cli"><span class="ci g">&#10003;</span><span>INOC knows which trains have room for more open space</span></div>
+<div class="cli"><span class="ci g">&#10003;</span><span>Standby customers get space earlier (not at the last minute)</span></div>
+<div class="cli"><span class="ci g">&#10003;</span><span>Standing underutilization is quantified per customer, per day</span></div>
+<div class="cli"><span class="ci g">&#10003;</span><span>The "sweet spot" for adding space (hours before cutoff) is data-driven</span></div>
+<div class="cli"><span class="ci g">&#10003;</span><span>No more missed revenue because one person was away from their desk</span></div>
+</div></div><div>
+<h4>What We Are NOT Doing</h4>
+<div class="cl">
+<div class="cli"><span class="ci r">&#x2717;</span><span>Not setting train length, weight, or physical capacity</span></div>
+<div class="cli"><span class="ci r">&#x2717;</span><span>Not replacing commercial standing agreements</span></div>
+<div class="cli"><span class="ci r">&#x2717;</span><span>Not auto-changing customer allocations daily</span></div>
+<div class="cli"><span class="ci r">&#x2717;</span><span>Not bypassing INOC — they approve every change</span></div>
+<div class="cli"><span class="ci r">&#x2717;</span><span>Not running 400 micro-recommendations per day</span></div>
+</div></div></div>
+
+<h3>Two-Tier Prediction Frequency</h3>
+<div class="tw"><table>
+<thead><tr><th>Tier</th><th>Frequency</th><th>Purpose</th><th>Audience</th><th>Volume</th></tr></thead>
+<tbody>
+<tr><td><strong>Strategic</strong></td><td>Weekly or on-demand</td><td>Broader trends: customer behavior shifts, standing utilization patterns, seasonal rebalancing recommendations</td><td>INOC leadership, Commercial team</td><td>Network-wide summary</td></tr>
+<tr><td><strong>Tactical</strong></td><td>Daily (morning) + refresh before major gate cutoffs</td><td>"What should I expect today for each originating train?" — with a significance threshold so only meaningful changes surface</td><td>INOC operators</td><td>~80 trains/day, filtered to actionable</td></tr>
+</tbody></table></div>
+
+<div class="alert w"><span class="ai2">&#x26A0;</span><div><strong>Significance threshold:</strong> Not every prediction change deserves a recommendation. If the model predicts 2 more containers than allocated — that's noise. The system only surfaces recommendations when the predicted gap exceeds a configurable threshold (e.g., ≥5 containers or ≥10% of allocation).</div></div>
+</section>
+
+<div class="sep"></div>
+
+<!-- ========== S3: TEMPORAL DIMENSIONS ========== -->
+<section id="temporal" class="fin">
+<span class="slabel">Section 03</span>
+<h2>Temporal Dimensions — How the Prediction Thinks</h2>
+<p class="lead">Before the model looks at any data, it must first understand <em>what kind of day it's predicting for</em>. Six temporal dimensions anchor every prediction — with day-of-week as the dominant signal.</p>
+
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin:20px 0">
+<div class="dim d1"><div class="dt" style="color:var(--green)">Dimension 1</div><div class="dv">Day of Week</div><div class="dd">Thursday vs. Saturday is the single biggest predictor. All comparisons snap to the same weekday.</div></div>
+<div class="dim d2"><div class="dt" style="color:var(--accent)">Dimension 2</div><div class="dv">Week Recency</div><div class="dd">Same day last week, 2 weeks ago, 4 weeks ago. Weighted toward most recent. Is it trending?</div></div>
+<div class="dim d3"><div class="dt" style="color:var(--purple)">Dimension 3</div><div class="dv">Month Position</div><div class="dd">"3rd Thursday of March" — not "March 20th." Position within the month matters, not the calendar date.</div></div>
+<div class="dim d4"><div class="dt" style="color:var(--orange)">Dimension 4</div><div class="dv">Seasonality</div><div class="dd">Q4 peak (Oct–Dec), summer patterns, quarterly cycles. "Nearest Thursday to this day last year."</div></div>
+<div class="dim d5"><div class="dt" style="color:var(--red)">Dimension 5</div><div class="dv">Holiday Override</div><div class="dd">Holidays take precedence over all. Thanksgiving, Christmas, July 4th — each with unique impact curves (pre/post/during).</div></div>
+<div class="dim d6"><div class="dt" style="color:var(--cyan)">Dimension 6</div><div class="dv">Shock Event Exclusion</div><div class="dd">Snow events, terminal shutdowns, system outages — flagged and excluded from training. Not predictable, not useful for patterns.</div></div>
+</div>
+
+<h3>How Dimensions Layer Into a Prediction</h3>
+<div class="cb"><span class="k">PREDICTION FOR: Train I010, Bedford Park, Thursday March 5, 2026</span>
+
+<span class="c">// Step 1: IDENTIFY what kind of day this is</span>
+<span class="f">day_of_week</span>     = Thursday          <span class="c">← DOMINANT signal</span>
+<span class="f">week_position</span>   = 1st Thursday of March
+<span class="f">month_position</span>  = Early month (day 5 of 31)
+<span class="f">quarter</span>         = Q1 (historically lighter)
+<span class="f">year_position</span>   = Week 10 of 52
+<span class="f">holiday_flag</span>    = NONE
+<span class="f">shock_flag</span>      = NONE
+
+<span class="c">// Step 2: GATHER comparable historical data points (all Thursdays)</span>
+<span class="s">Last week Thursday</span>       (Feb 27)  → 187 containers  <span class="c">← highest weight</span>
+<span class="s">2 weeks ago Thursday</span>     (Feb 20)  → 192 containers
+<span class="s">3 weeks ago Thursday</span>     (Feb 13)  → 183 containers
+<span class="s">4 weeks ago Thursday</span>     (Feb 6)   → 179 containers
+<span class="s">Same-position Thursday last month</span>  → 175 containers
+<span class="s">Same-position Thursday 2 months</span>   → 168 containers
+<span class="s">Nearest Thursday last year</span> (Mar 6, 2025) → 171 containers  <span class="c">← seasonality</span>
+
+<span class="c">// Step 3: DETECT trend</span>
+<span class="f">4-week Thursday trend</span> = +2.7 containers/week (↑ growing)
+
+<span class="c">// Step 4: WEIGHT and PREDICT</span>
+<span class="k">Prior 1-2 weeks (same day)</span>:  <span class="s">40% weight</span>  → ~189
+<span class="k">Prior 3-4 weeks (same day)</span>:  <span class="s">25% weight</span>  → ~181
+<span class="k">Prior 2-3 months (avg)</span>:     <span class="s">20% weight</span>  → ~172
+<span class="k">Year-over-year seasonal</span>:    <span class="s">15% weight</span>  → ~171
+
+<span class="k">PREDICTION: ~183 containers</span>  (confidence: ±8, range 175–191)
+<span class="k">TREND: ↑ Growing</span>  (recent weeks above historical average)
+
+<span class="c">// Step 5: COMPARE to allocation</span>
+Current standing allocation: 150  |  Current open: 20  |  Total: 170
+<span class="k">GAP: Predicted 183 vs Allocated 170 = +13 OVER-DEMAND</span>
+<span class="k">RECOMMENDATION: Consider adding 15 open spaces</span>
+  Significance: 7.6% over allocation → ABOVE threshold → SURFACE TO INOC</div>
+
+<h3>Day-of-Week Anchoring — The Critical Design Principle</h3>
+<div class="alert i"><span class="ai2">&#x1F4CD;</span><div><strong>Every temporal comparison snaps to the same weekday.</strong> "3rd Thursday of March" — not "March 20th." If March 20 is a Thursday one year and a Saturday the next, comparing raw dates produces garbage. The model always aligns on: <strong>same weekday → same position in month → same seasonal window.</strong></div></div>
+
+<div class="tw"><table>
+<thead><tr><th>Comparison Type</th><th>Right Way</th><th>Wrong Way</th><th>Why</th></tr></thead>
+<tbody>
+<tr><td>Week-over-week</td><td>Last Thursday → this Thursday</td><td>7 days ago (date-math)</td><td>Already the same in most cases, but must handle holiday shifts</td></tr>
+<tr><td>Month-over-month</td><td>1st Thursday of Feb → 1st Thursday of Mar</td><td>Feb 5 → Mar 5</td><td>Feb 5 could be a Wednesday; comparing to Thursday is meaningless</td></tr>
+<tr><td>Year-over-year</td><td>Nearest Thursday to March 5 in 2025</td><td>March 5, 2025 (a Wednesday)</td><td>Day-of-week drives demand more than the calendar date</td></tr>
+<tr><td>Holiday comparison</td><td>Thanksgiving Thursday 2024 → Thanksgiving Thursday 2025</td><td>Nov 28, 2024 → Nov 27, 2025</td><td>Holiday = the event, not the date. Compare the same event.</td></tr>
+</tbody></table></div>
+
+<h3>Known Factors vs. Shock Events</h3>
+<div class="two"><div>
+<h4>Known Factors (Modeled)</h4>
+<div class="cl">
+<div class="cli"><span class="ci g">&#10003;</span><span>Day of week (Monday through Sunday)</span></div>
+<div class="cli"><span class="ci g">&#10003;</span><span>Position within month (1st/2nd/3rd/4th/5th occurrence of that weekday)</span></div>
+<div class="cli"><span class="ci g">&#10003;</span><span>Month of year (seasonal curves)</span></div>
+<div class="cli"><span class="ci g">&#10003;</span><span>Quarter (Q1-Q4 business cycles)</span></div>
+<div class="cli"><span class="ci g">&#10003;</span><span>Holidays (fixed + floating, pre/during/post impact curves)</span></div>
+<div class="cli"><span class="ci g">&#10003;</span><span>Peak season (Oct–Dec retail surge)</span></div>
+<div class="cli"><span class="ci g">&#10003;</span><span>Trend direction (growing/declining/stable over recent weeks)</span></div>
+</div></div><div>
+<h4>Shock Events (Excluded)</h4>
+<div class="cl">
+<div class="cli"><span class="ci r">&#x2717;</span><span>Snow/weather terminal shutdowns</span></div>
+<div class="cli"><span class="ci r">&#x2717;</span><span>Customer system outages</span></div>
+<div class="cli"><span class="ci r">&#x2717;</span><span>Equipment failures (terminal-wide)</span></div>
+<div class="cli"><span class="ci r">&#x2717;</span><span>Strike events / labor disruptions</span></div>
+<div class="cli"><span class="ci r">&#x2717;</span><span>Network disruptions (track closure)</span></div>
+<div class="cli"><span class="ci r">&#x2717;</span><span>Any operator-flagged anomaly day</span></div>
+</div>
+<div class="alert w" style="margin-top:10px"><span class="ai2">&#x1F6A9;</span><div>Operators can tag any historical day as a shock event via a simple UI. Tagged days are excluded from all training windows so they don't pollute future predictions.</div></div>
+</div></div>
+</section>
+<div class="sep"></div>
+
+<!-- ========== S4: PREDICTION ENGINE ========== -->
+<section id="prediction" class="fin">
+<span class="slabel">Section 04</span>
+<h2>Prediction Engine — Models &amp; Algorithms</h2>
+<p class="lead">Two-stage prediction: first predict gross demand per customer, then adjust for no-show behavior to arrive at net expected arrivals. All models are day-of-week anchored.</p>
+
+<h3>Stage 1: Demand Forecasting (Per Train, Per Day)</h3>
+<div class="tw"><table>
+<thead><tr><th>Model</th><th>Type</th><th>Role</th><th>Why This Model</th></tr></thead>
+<tbody>
+<tr><td><strong>Weekday-Weighted Historical</strong></td><td>Statistical Baseline</td><td>Foundation layer — same-weekday comparisons with recency weighting</td><td>Transparent, explainable, validated against how operations already thinks</td></tr>
+<tr><td><strong>Prophet</strong></td><td>Time Series</td><td>Seasonal decomposition + holiday effects + uncertainty intervals</td><td>Handles weekly/annual seasonality natively. Built-in holiday modeling. Produces confidence bands.</td></tr>
+<tr><td><strong>XGBoost / LightGBM</strong></td><td>Gradient Boosting</td><td>Multi-feature demand prediction using all temporal + customer + terminal features</td><td>Best-in-class for tabular data. Fast inference. Feature importance via SHAP.</td></tr>
+<tr><td><strong>Ensemble (Stacking)</strong></td><td>Meta-Model</td><td>Combines all models — weighted by per-terminal accuracy</td><td>Reduces variance. Different models excel for different terminals/patterns.</td></tr>
+</tbody></table></div>
+
+<h3>Stage 2: No-Show Adjustment (Per Customer)</h3>
+<div class="tw"><table>
+<thead><tr><th>Feature</th><th>Description</th><th>Importance</th></tr></thead>
+<tbody>
+<tr><td><strong>Customer historical no-show rate</strong></td><td>INGAT/NOSHW ratio per customer, per weekday, per train</td><td>Highest — some customers systematically no-show on specific days</td></tr>
+<tr><td><strong>Day of week</strong></td><td>No-show rates vary by day — Friday/Saturday typically higher</td><td>High</td></tr>
+<tr><td><strong>Reservation type</strong></td><td>Standing vs. Open vs. Dynamic — different no-show profiles</td><td>High</td></tr>
+<tr><td><strong>Waybill created?</strong></td><td>If waybill exists 1-4 days before departure, arrival is much more likely</td><td>High (leading indicator)</td></tr>
+<tr><td><strong>Days to departure</strong></td><td>Reservations made far in advance have higher no-show rates</td><td>Medium</td></tr>
+<tr><td><strong>Customer tier / type</strong></td><td>Dynamic (big 3) vs. standing vs. open customers have different reliability</td><td>Medium</td></tr>
+<tr><td><strong>Trend shift</strong></td><td>Is this customer's no-show rate improving or worsening?</td><td>Medium</td></tr>
+</tbody></table></div>
+
+<div class="cb"><span class="k">NET DEMAND FORMULA</span>
+
+  For each customer C on train T on day D:
+    <span class="f">gross_demand</span>(C, T, D)  = predicted containers from Stage 1
+    <span class="f">noshow_prob</span>(C, T, D)   = predicted no-show probability from Stage 2
+
+  <span class="k">Net Expected Arrivals = Σ gross_demand(C,T,D) × (1 − noshow_prob(C,T,D))</span>
+
+  Example:
+    UPS standing: 50 allocated, predicted 48 gross, 12% no-show → <span class="s">42.2 net</span>
+    JB Hunt standing: 30 allocated, predicted 22 gross, 35% no-show → <span class="s">14.3 net</span>
+    Open customers: 40 allocated, predicted 35 gross, 8% no-show → <span class="s">32.2 net</span>
+
+    <span class="k">Total Net Expected: ~89 containers</span> vs. 120 allocated = 31 phantom-blocked slots</div>
+
+<h3>Anomaly Detection Layer</h3>
+<div class="grid">
+<div class="card"><h4>Isolation Forest</h4><p>Detects unusual demand spikes or drops that don't fit any pattern. Flags for INOC review before recommendations are generated.</p></div>
+<div class="card"><h4>Changepoint Detection (CUSUM)</h4><p>Detects when a customer's behavior fundamentally shifts — e.g., a shipper permanently reduces volume. Triggers model retrain for that customer segment.</p></div>
+<div class="card"><h4>Trend Analysis</h4><p>Is demand on this corridor growing, declining, or stable? Rolling 4-week and 12-week trend indicators. Informs whether standing allocations need strategic review.</p></div>
+</div>
+
+<h3>Model Retraining Cadence</h3>
+<div class="cl">
+<div class="cli"><span class="ci g">1</span><span><strong>Continuous learning:</strong> Every actual outcome (INGAT/NOSHW) feeds back into the data lake automatically via Fabric mirroring</span></div>
+<div class="cli"><span class="ci g">2</span><span><strong>Bi-weekly retrain:</strong> Models retrained every 2 weeks incorporating latest actuals + operator feedback (approve/reject patterns)</span></div>
+<div class="cli"><span class="ci g">3</span><span><strong>Triggered retrain:</strong> If prediction accuracy drops below threshold (e.g., MAPE > 15% for 5 consecutive days), automatic retrain triggered</span></div>
+<div class="cli"><span class="ci g">4</span><span><strong>Seasonal recalibration:</strong> Full model review at seasonal transitions (pre-peak Q4, post-holiday Q1)</span></div>
+</div>
+
+<div class="met">
+<div class="mc"><div class="v" style="color:var(--green)">±5%</div><div class="l">1-Day Accuracy Target</div></div>
+<div class="mc"><div class="v" style="color:var(--accent)">±10%</div><div class="l">7-Day Accuracy Target</div></div>
+<div class="mc"><div class="v" style="color:var(--orange)">±15-20%</div><div class="l">30-Day Accuracy Target</div></div>
+<div class="mc"><div class="v" style="color:var(--purple)">&lt;2s</div><div class="l">Single-Train Inference</div></div>
+</div>
+</section>
+
+<div class="sep"></div>
+
+<!-- ========== S4b: EXPLAINABILITY & LLM ========== -->
+<section id="explainability" class="fin">
+<span class="slabel">Section 04b</span>
+<h2>Explainability &amp; LLM Intelligence Layer</h2>
+<p class="lead">Every prediction and recommendation includes a machine-generated explanation — translating raw model outputs into language INOC operators can read, trust, and act on. Azure OpenAI powers the narrative layer; SHAP provides the mathematical foundation.</p>
+
+<h3>How It Works: From Numbers to Narrative</h3>
+<div class="arch">
+<div class="aflow" style="min-width:760px">
+<div class="anode"><div class="abox" style="border-color:var(--purple)"><div class="ai">&#x1F9E0;</div><div class="at">Prediction Engine</div><div class="as">Outputs: net demand,<br>confidence, trend,<br>per-customer breakdown</div></div></div>
+<div class="aarr">&#x2192;</div>
+<div class="anode"><div class="abox" style="border-color:var(--cyan)"><div class="ai">&#x1F4CA;</div><div class="at">SHAP Analysis</div><div class="as">Feature importance<br>per prediction:<br>which factors drove it</div></div></div>
+<div class="aarr">&#x2192;</div>
+<div class="anode"><div class="abox" style="border-color:var(--accent)"><div class="ai">&#x1F4AC;</div><div class="at">Azure OpenAI</div><div class="as">Converts SHAP +<br>prediction data into<br>human-readable narrative</div></div></div>
+<div class="aarr">&#x2192;</div>
+<div class="anode"><div class="abox" style="border-color:var(--green)"><div class="ai">&#x1F4DD;</div><div class="at">INOC Sees</div><div class="as">Plain-English explanation<br>attached to every<br>recommendation</div></div></div>
+</div>
+</div>
+
+<h3>Three Layers of Explainability</h3>
+<div class="grid">
+<div class="card" style="border-top:3px solid var(--cyan)">
+<h4>Layer 1: SHAP Feature Importance</h4>
+<p>For every single prediction, SHAP (SHapley Additive exPlanations) calculates exactly how much each feature contributed. "Day-of-week contributed +18 containers. Customer UPS no-show trend contributed -6. Holiday proximity contributed -3." These are the mathematical facts behind the prediction.</p>
+</div>
+<div class="card" style="border-top:3px solid var(--accent)">
+<h4>Layer 2: Azure OpenAI Narrative Generation</h4>
+<p>Raw SHAP values are fed to Azure OpenAI (GPT-4) with a structured prompt that converts them into operator-friendly language: <em>"Add 15 opens because last 4 Thursdays averaged 187 net arrivals, UPS utilization is trending at 90% on Thursdays, 3 waybills already created, and 4 standby requests suggest unmet demand."</em> Every recommendation gets this narrative automatically.</p>
+</div>
+<div class="card" style="border-top:3px solid var(--green)">
+<h4>Layer 3: Confidence Scoring</h4>
+<p>Each recommendation tagged <strong>High / Medium / Low</strong> confidence based on: prediction interval width, data availability for this train/day pattern, how many similar historical data points exist, and recent model accuracy for this terminal. Low-confidence flags encourage INOC scrutiny.</p>
+</div>
+</div>
+
+<h3>Example: What INOC Actually Sees</h3>
+<div class="mock">
+<div class="mtbar"><span class="mdot r"></span><span class="mdot y"></span><span class="mdot g"></span><span style="flex:1;text-align:center;font-size:11.5px;color:var(--text2)">AI Explanation — Train I010 — Thursday March 5</span></div>
+<div class="mcont" style="font-size:13.5px">
+
+<div style="background:rgba(0,214,143,.06);border-radius:8px;padding:14px;margin-bottom:14px;border-left:3px solid var(--green)">
+<div style="font-weight:700;color:var(--green);margin-bottom:6px;font-size:14px">&#x2713; Recommendation: Add 15 Open Spaces</div>
+<div style="color:var(--text2);font-size:13px;line-height:1.7">
+<strong style="color:var(--text)">Predicted net arrivals: 183</strong> (confidence range: 175–191) vs. current allocation of 170.<br><br>
+<strong style="color:var(--accent2)">Why this prediction:</strong><br>
+&#x25B8; <strong>Day-of-week pattern (44% of signal):</strong> Thursdays at Bedford Park consistently run 10-15% higher than the weekly average. Last 4 Thursdays: 192, 187, 183, 179 — averaging 185 net containers.<br>
+&#x25B8; <strong>Recent trend (22% of signal):</strong> Demand on this corridor is growing at ~2.7 containers/week over the past month. The trend is upward, not stable.<br>
+&#x25B8; <strong>Customer behavior (18% of signal):</strong> UPS Thursday utilization running at 90% (vs. 72% on Mondays). JB Hunt trending down slightly (-3% month-over-month). 3 waybills already created — strong arrival signal.<br>
+&#x25B8; <strong>Seasonal position (11% of signal):</strong> Early March historically shows a slight uptick as Q1 freight volumes recover post-holiday. Year-over-year same-position Thursday was 171 — we're running 7% above last year.<br>
+&#x25B8; <strong>Standby signal (5% of signal):</strong> 4 customers on standby for this train — indicates unmet demand beyond current allocation.<br><br>
+<strong style="color:var(--accent2)">Confidence: HIGH</strong> — 48 comparable Thursdays in training data. Model accuracy on this train's Thursdays: 93.2% (7-day MAPE).<br><br>
+<strong style="color:var(--orange)">Risk if no action:</strong> ~13 containers turned away or pushed to standby. At incremental margin per container, this represents significant missed revenue. Space added now (7 hours before cutoff) has ~80% expected utilization rate.
+</div>
+</div>
+
+<div style="background:var(--bg3);border-radius:8px;padding:12px;margin-bottom:10px">
+<div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">SHAP Feature Contribution Breakdown</div>
+<div style="display:flex;gap:4px;align-items:flex-end;height:60px">
+<div style="flex:1;display:flex;flex-direction:column;align-items:center"><div style="width:100%;background:var(--green);border-radius:3px 3px 0 0;height:60px"></div><div style="font-size:9px;color:var(--text2);margin-top:3px;text-align:center">Day of Week<br><strong style="color:var(--green)">44%</strong></div></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center"><div style="width:100%;background:var(--accent);border-radius:3px 3px 0 0;height:30px"></div><div style="font-size:9px;color:var(--text2);margin-top:3px;text-align:center">Trend<br><strong style="color:var(--accent)">22%</strong></div></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center"><div style="width:100%;background:var(--purple);border-radius:3px 3px 0 0;height:24px"></div><div style="font-size:9px;color:var(--text2);margin-top:3px;text-align:center">Customer<br><strong style="color:var(--purple)">18%</strong></div></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center"><div style="width:100%;background:var(--orange);border-radius:3px 3px 0 0;height:15px"></div><div style="font-size:9px;color:var(--text2);margin-top:3px;text-align:center">Season<br><strong style="color:var(--orange)">11%</strong></div></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center"><div style="width:100%;background:var(--cyan);border-radius:3px 3px 0 0;height:7px"></div><div style="font-size:9px;color:var(--text2);margin-top:3px;text-align:center">Standby<br><strong style="color:var(--cyan)">5%</strong></div></div>
+</div>
+</div>
+
+</div>
+</div>
+
+<h3>Phase 2: Conversational Intelligence (Chat Interface)</h3>
+<div class="two"><div>
+<h4>Natural Language Queries</h4>
+<p>INOC operators ask questions in plain English. Azure OpenAI with RAG (Retrieval-Augmented Generation) over prediction data, historical patterns, and operator feedback provides grounded, accurate answers.</p>
+<div class="cl">
+<div class="cli"><span class="ci b">&#x25B8;</span><span>"What should I expect for Train I010 this Thursday?"</span></div>
+<div class="cli"><span class="ci b">&#x25B8;</span><span>"Which customers have the highest no-show rate at Bedford Park?"</span></div>
+<div class="cli"><span class="ci b">&#x25B8;</span><span>"Should I add opens for Thanksgiving week?"</span></div>
+<div class="cli"><span class="ci b">&#x25B8;</span><span>"Compare this month's utilization to last year."</span></div>
+<div class="cli"><span class="ci b">&#x25B8;</span><span>"Why did we miss on Train M209 last Tuesday?"</span></div>
+</div>
+</div><div>
+<h4>What-If Scenario Simulation</h4>
+<p>Operators can ask hypothetical questions and the system runs the prediction pipeline with modified inputs to show projected impact:</p>
+<div class="cl">
+<div class="cli"><span class="ci o">?</span><span>"What if UPS reduces their standing by 20 on this corridor?"</span></div>
+<div class="cli"><span class="ci o">?</span><span>"What happens if we add 30 opens to I010 on Fridays?"</span></div>
+<div class="cli"><span class="ci o">?</span><span>"If we moved 10 standings from Monday to Thursday for JB Hunt, what's the impact?"</span></div>
+<div class="cli"><span class="ci o">?</span><span>"Project demand for peak season — should we pre-add opens for October?"</span></div>
+</div>
+</div></div>
+</section>
+
+<div class="sep"></div>
+
+<!-- ========== S4c: PREDICTIONS CATALOG ========== -->
+<section id="catalog" class="fin">
+<span class="slabel">Section 04c</span>
+<h2>Predictions Catalog — Complete Output Inventory</h2>
+<p class="lead">Every prediction the system produces, its format, frequency, and who consumes it.</p>
+
+<h3>Core Predictions (Phase 1)</h3>
+<div class="tw"><table>
+<thead><tr><th>Prediction</th><th>Output</th><th>Frequency</th><th>Consumer</th><th>Explainability</th></tr></thead>
+<tbody>
+<tr><td><strong>Net Expected Arrivals</strong></td><td>Container count + confidence range per train per day</td><td>Daily (morning) + pre-cutoff refresh</td><td>INOC operators</td><td>SHAP + narrative: which temporal factors + customer signals drove it</td></tr>
+<tr><td><strong>Open Space Recommendation</strong></td><td>"+15 opens" or "no change" with significance score</td><td>Daily, only when above threshold</td><td>INOC operators</td><td>Full narrative: why this number, what factors, what happens if no action</td></tr>
+<tr><td><strong>Per-Customer No-Show Probability</strong></td><td>0–100% per customer per train per day-of-week</td><td>Daily + weekly aggregate</td><td>INOC + Commercial</td><td>SHAP: customer history, waybill signal, day-of-week pattern</td></tr>
+<tr><td><strong>Customer Standing Utilization Forecast</strong></td><td>Expected % utilization per customer per weekday</td><td>Weekly strategic report</td><td>INOC leadership + Commercial</td><td>Trend analysis: improving/declining, day-of-week breakdown</td></tr>
+<tr><td><strong>Trend Direction</strong></td><td>↑ Growing / → Stable / ↓ Declining per corridor</td><td>Weekly</td><td>INOC leadership</td><td>4-week and 12-week rolling comparison with seasonal context</td></tr>
+<tr><td><strong>Demand vs. Allocation Gap</strong></td><td>Over-demand / Under-demand per train</td><td>Daily</td><td>INOC operators</td><td>Current allocation vs. predicted net — quantified gap</td></tr>
+<tr><td><strong>Standby Queue Prediction</strong></td><td>Expected standby depth 1–3 days ahead</td><td>Daily</td><td>INOC operators</td><td>If standby exceeds threshold → recommend proactive open addition</td></tr>
+<tr><td><strong>Lead-Time Utilization Rate</strong></td><td>% space used at 2hr / 4hr / 6hr before cutoff</td><td>Weekly analysis</td><td>INOC leadership</td><td>Empirical analysis of when to add space for maximum utilization</td></tr>
+<tr><td><strong>Anomaly / Spike Alert</strong></td><td>Alert with severity (High/Medium/Low)</td><td>Real-time trigger</td><td>INOC operators</td><td>What's abnormal, by how much, compared to what baseline</td></tr>
+<tr><td><strong>Model Accuracy Score</strong></td><td>MAPE, MAE per terminal per train per day-of-week</td><td>Daily auto-computed</td><td>INOC + Data Science</td><td>Predicted vs. actual, accuracy trend over time, accuracy by dimension</td></tr>
+</tbody></table></div>
+
+<h3>Strategic Predictions (Phase 1 — Weekly)</h3>
+<div class="tw"><table>
+<thead><tr><th>Prediction</th><th>Output</th><th>Consumer</th></tr></thead>
+<tbody>
+<tr><td><strong>Phantom-Blocked Space Report</strong></td><td>Standings allocated but consistently unused, by customer, by day-of-week</td><td>Commercial + INOC leadership</td></tr>
+<tr><td><strong>Seasonal Demand Curve</strong></td><td>Next 30-day demand forecast by corridor with year-over-year comparison</td><td>INOC leadership</td></tr>
+<tr><td><strong>Customer Reliability Ranking</strong></td><td>Most/least reliable customers by INGAT/NOSHW ratio</td><td>Commercial</td></tr>
+<tr><td><strong>Corridor Growth/Decline</strong></td><td>Which corridors are growing vs. declining over 3/6/12 months</td><td>Strategy + Commercial</td></tr>
+</tbody></table></div>
+
+<h3>Future Predictions (Phase 2)</h3>
+<div class="tw"><table>
+<thead><tr><th>Prediction</th><th>Output</th><th>Requires</th></tr></thead>
+<tbody>
+<tr><td><strong>Same-Day Demand Adjustment</strong></td><td>Updated prediction based on real-time gate-in data + RTOP train ETA</td><td>RTOP integration + Kafka real-time feed</td></tr>
+<tr><td><strong>Weather Impact Forecast</strong></td><td>Demand reduction % based on weather conditions at terminal</td><td>Weather API integration</td></tr>
+<tr><td><strong>Optimal Standing Allocation</strong></td><td>"Customer X should have 35 (not 50) on Mondays, 50 on Thursdays"</td><td>12+ months of day-of-week utilization data + commercial approval</td></tr>
+<tr><td><strong>Equipment Repositioning Signal</strong></td><td>Where empty containers are accumulating vs. where demand is growing</td><td>Integration with door-to-door / equipment tracking</td></tr>
+</tbody></table></div>
+</section>
+
+<div class="sep"></div>
+
+<!-- ========== S5: FUNCTIONAL REQUIREMENTS ========== -->
+<section id="functional" class="fin">
+<span class="slabel">Section 05</span>
+<h2>Functional Requirements</h2>
+
+<div class="tabs">
+<div class="tnav">
+<button class="tbtn on" onclick="st(event,'f1')">5.1 Demand Prediction</button>
+<button class="tbtn" onclick="st(event,'f2')">5.2 Open Queue Automation</button>
+<button class="tbtn" onclick="st(event,'f3')">5.3 Standby Insights</button>
+<button class="tbtn" onclick="st(event,'f4')">5.4 Human-in-the-Loop</button>
+<button class="tbtn" onclick="st(event,'f5')">5.5 Alerts &amp; Shock Events</button>
+<button class="tbtn" onclick="st(event,'f6')">5.6 Accuracy Tracking</button>
+</div>
+
+<div id="f1" class="tpan on">
+<h3>5.1 AI Demand Prediction</h3>
+<p>Per-train, per-day demand prediction anchored on all six temporal dimensions. Per-customer standing utilization forecasting. Net effective demand after no-show adjustment.</p>
+<div class="two"><div>
+<h4>Prediction Outputs (Per Train, Per Day)</h4>
+<div class="cl">
+<div class="cli"><span class="ci g">&#10003;</span><span><strong>Net expected containers</strong> — the actual number operations should plan for</span></div>
+<div class="cli"><span class="ci g">&#10003;</span><span><strong>Gross reservations forecast</strong> — what reservation count will look like</span></div>
+<div class="cli"><span class="ci g">&#10003;</span><span><strong>Confidence interval</strong> — range (e.g., 175–191) so INOC knows certainty level</span></div>
+<div class="cli"><span class="ci g">&#10003;</span><span><strong>Trend direction</strong> — ↑ growing, → stable, ↓ declining</span></div>
+<div class="cli"><span class="ci g">&#10003;</span><span><strong>Gap analysis</strong> — predicted demand vs. current allocation = over/under</span></div>
+</div></div><div>
+<h4>Per-Customer Breakdown</h4>
+<div class="cl">
+<div class="cli"><span class="ci b">&#x25B8;</span><span>Each standing customer: predicted utilization for that day</span></div>
+<div class="cli"><span class="ci b">&#x25B8;</span><span>No-show probability per customer for that specific weekday</span></div>
+<div class="cli"><span class="ci b">&#x25B8;</span><span>Waybill status: has the customer created waybills yet? (leading indicator)</span></div>
+<div class="cli"><span class="ci b">&#x25B8;</span><span>Customer trend: is this shipper shipping more or less recently?</span></div>
+</div>
+</div></div>
+</div>
+
+<div id="f2" class="tpan">
+<h3>5.2 Open Queue Automation</h3>
+<p>Automatically recommend adding or removing open spaces based on predicted demand vs. allocation — with configurable rules, limits, and human approval.</p>
+<div class="cb"><span class="k">RULE 1: DEMAND EXCEEDS ALLOCATION</span>
+  IF predicted_net_demand > (standing_alloc + open_alloc) × 0.90 → RECOMMEND add opens
+  Amount: predicted_gap + buffer (configurable, default 10%)
+
+<span class="k">RULE 2: SIGNIFICANT UNDERUTILIZATION</span>
+  IF predicted_net_demand < (standing_alloc + open_alloc) × 0.60 for 3+ days → FLAG for review
+  Note: Do NOT auto-reduce. Surface for INOC strategic discussion.
+
+<span class="k">RULE 3: LEAD-TIME AWARE</span>
+  Space added ≥ 6 hours before cutoff → ~80% expected utilization
+  Space added 2-4 hours before cutoff → ~40-60% expected utilization
+  Space added < 2 hours before cutoff → ~15% expected utilization
+  RECOMMENDATION: Prioritize early adds. Flag late adds as low-confidence.
+
+<span class="k">RULE 4: HOLIDAY ADJUSTMENT</span>
+  IF holiday_flag = TRUE → Apply holiday-specific demand curve
+  Pre-Thanksgiving week: +15-25% on Tue/Wed, -40% on Thu/Fri
+  Post-Christmas: -30% for 3-5 days
+
+<span class="k">RULE 5: DO NOT TOUCH</span>
+  IF terminal on "Do Not Touch" list → SUPPRESS all automation for that terminal/period
+
+<span class="c">// All rules configurable per terminal. All require INOC approval in Phase 1.</span></div>
+</div>
+
+<div id="f3" class="tpan">
+<h3>5.3 Standby / Waitlist Insights</h3>
+<div class="grid">
+<div class="card"><h4>Standby Queue Depth</h4><p>How many standby requests exist per train? If automation adds opens, standby customers get served first (priority order). Track: how quickly are standby requests fulfilled?</p></div>
+<div class="card"><h4>Lead-Time-to-Utilization Analysis</h4><p>When space is added X hours before cutoff, what percentage actually gets used? Find the sweet spot. This is a high-value deliverable INOC has explicitly asked for.</p></div>
+<div class="card"><h4>Unmet Demand Quantification</h4><p>When trains show "full" but demand exists (standby queue + turned-away customers), quantify the revenue missed. This justifies the investment in better allocation.</p></div>
+</div>
+</div>
+
+<div id="f4" class="tpan">
+<h3>5.4 Human-in-the-Loop Workflow</h3>
+<p>INOC operators review every AI recommendation. Approve, reject, or modify — with required explanation. Feedback improves the model.</p>
+<div class="cl">
+<div class="cli"><span class="ci g">&#10003;</span><span><strong>Morning Briefing:</strong> At shift start, INOC sees today's predictions for all ~80 originating trains — only those exceeding significance threshold are highlighted</span></div>
+<div class="cli"><span class="ci g">&#10003;</span><span><strong>Three Actions:</strong> Approve (one-click) | Modify (adjust number, provide reason) | Reject (reason required)</span></div>
+<div class="cli"><span class="ci g">&#10003;</span><span><strong>Terminal Constraints:</strong> If terminal has flagged "Do Not Touch" (equipment down, etc.), recommendations for that terminal are suppressed</span></div>
+<div class="cli"><span class="ci g">&#10003;</span><span><strong>Feedback Loop:</strong> Every action stored. Rejection patterns analyzed weekly. Monthly retrain incorporates operator corrections.</span></div>
+</div>
+</div>
+
+<div id="f5" class="tpan">
+<h3>5.5 Alerts &amp; Shock Event Management</h3>
+<div class="two"><div>
+<h4>Automated Alerts</h4>
+<div class="cl">
+<div class="cli"><span class="ci o">!</span><span>Demand spike: prediction >2 std dev above rolling mean</span></div>
+<div class="cli"><span class="ci o">!</span><span>Customer behavior shift: no-show rate changes >15%</span></div>
+<div class="cli"><span class="ci o">!</span><span>Standby overflow: queue exceeds threshold</span></div>
+<div class="cli"><span class="ci o">!</span><span>Prediction accuracy degradation: MAPE >15% for 5+ days</span></div>
+</div></div><div>
+<h4>Shock Event Tagging</h4>
+<div class="cl">
+<div class="cli"><span class="ci r">&#x2717;</span><span>INOC can tag any day as "shock event" — snow, outage, strike, etc.</span></div>
+<div class="cli"><span class="ci r">&#x2717;</span><span>Tagged days excluded from all future training windows</span></div>
+<div class="cli"><span class="ci r">&#x2717;</span><span>Categories: Weather, Equipment, Customer Outage, Network, Other</span></div>
+<div class="cli"><span class="ci r">&#x2717;</span><span>Can apply to single terminal, single train, or network-wide</span></div>
+</div></div></div>
+</div>
+
+<div id="f6" class="tpan">
+<h3>5.6 Continuous Accuracy Tracking</h3>
+<p>Per Chang's requirement: clear definition of success, continuous accuracy measurement, visible improvement over time.</p>
+<div class="cl">
+<div class="cli"><span class="ci g">&#10003;</span><span><strong>Predicted vs. Actual:</strong> Every prediction is scored against actual gate-in count next day. Automatic, continuous.</span></div>
+<div class="cli"><span class="ci g">&#10003;</span><span><strong>Accuracy by dimension:</strong> Break down accuracy by terminal, train, day-of-week, customer segment. Where is the model strong vs. weak?</span></div>
+<div class="cli"><span class="ci g">&#10003;</span><span><strong>Trend over time:</strong> Is accuracy improving week-over-week? Show the learning curve. Rising accuracy = model is getting better.</span></div>
+<div class="cli"><span class="ci g">&#10003;</span><span><strong>Feedback impact:</strong> Measure: do operator corrections improve subsequent predictions? Quantify the value of the human-in-the-loop.</span></div>
+</div>
+</div>
+</div>
+</section>
+
+<div class="sep"></div>
+
+<!-- ========== S6: DATA ========== -->
+<section id="data" class="fin">
+<span class="slabel">Section 06</span>
+<h2>Data Requirements</h2>
+<p class="lead">Three primary collections confirmed (reservation, waybill, allocation + tripplan) plus supplemental sources for context and constraints.</p>
+
+<h3>Primary Data Sources (Confirmed)</h3>
+<div class="tw"><table>
+<thead><tr><th>Collection</th><th>Documents</th><th>Prediction Role</th><th>Key Fields</th></tr></thead>
+<tbody>
+<tr><td><strong>reservation</strong></td><td>2.9M</td><td>Core training data: status outcomes (INGAT/NOSHW/ISSUE), customer, train, day-of-week, times</td><td>reservationStatus, reservationType (STAND/OPEN), partyName, trainId, dayOfWeek, effectiveDate, ingateFrom/To</td></tr>
+<tr><td><strong>waybill</strong></td><td>2.3M</td><td>Leading indicator: waybill creation 1-4 days before departure signals likely arrival</td><td>createDate, reservationId (join key), status, waybillPartyName</td></tr>
+<tr><td><strong>allocations</strong></td><td>—</td><td>Standing/open/dynamic allocation configurations per train per terminal</td><td>Shipper (if defined = standing), line-of-business constraints, allocation counts</td></tr>
+<tr><td><strong>tripplan</strong></td><td>Embedded</td><td>Container routing across trains. Queryable via <code>tripplan.trainIds</code></td><td>trainIds array, pickupDateTime</td></tr>
+</tbody></table></div>
+
+<h3>Supplemental Sources</h3>
+<div class="tw"><table>
+<thead><tr><th>Source</th><th>Role</th><th>Priority</th></tr></thead>
+<tbody>
+<tr><td>reservationHistory</td><td>Cancellation patterns, modification timing</td><td>High</td></tr>
+<tr><td>standbyRequest + History</td><td>Overflow demand signal — quantifies unmet demand</td><td>High</td></tr>
+<tr><td>terminalAllocationSpaceHistory</td><td>What INOC actually changed (ground truth for recommendations)</td><td>High</td></tr>
+<tr><td>viewLogNoSpace / AllocationFull</td><td>Customers turned away = lost revenue quantification</td><td>High</td></tr>
+<tr><td>terminalAllocationTier / tier</td><td>Customer segmentation: standing, dynamic, open</td><td>Medium</td></tr>
+<tr><td>bouncer</td><td>Gate-in/out validation data</td><td>Medium</td></tr>
+</tbody></table></div>
+
+<div class="alert w"><span class="ai2">&#x26A0;</span><div><strong>Kafka limitation:</strong> The current Kafka feed only sends waybill-to-reservation association events, not full waybill details. For complete waybill data needed by the prediction engine, Fabric mirroring of the MongoDB collection is required — not just the Kafka stream.</div></div>
+
+<h3>Reservation Status Nuance</h3>
+<div class="cb"><span class="k">STATUS LOGIC DIFFERS BY RESERVATION TYPE</span>
+
+<span class="f">Standing Reservations:</span>
+  Created 10 days in advance.
+  <span class="s">ISSUE status → does NOT subtract space</span>  (space already reserved)
+  INGAT status → customer arrived (success)
+  NOSHW status → customer didn't show (no-show)
+
+<span class="f">Open Reservations:</span>
+  <span class="s">ISSUE status → DOES subtract space immediately</span>  (first-come, first-served)
+  INGAT status → customer arrived
+  NOSHW status → customer didn't show
+
+<span class="c">// This difference is critical for feature engineering:</span>
+<span class="c">// "Available space" calculation depends on reservation type</span>
+<span class="c">// Standing: space consumed at allocation time (10 days out)</span>
+<span class="c">// Open: space consumed when reservation enters ISSUE status</span></div>
+</section>
+<div class="sep"></div>
+
+<!-- ========== S7: ARCHITECTURE ========== -->
+<section id="architecture" class="fin">
+<span class="slabel">Section 07</span>
+<h2>Technical Architecture</h2>
+<p class="lead">All processing within Microsoft Fabric. AI system outside core IARS reservation flows. Read-only data access. Option for Kafka event streaming for real-time integration.</p>
+
+<div class="arch">
+<div class="aflow">
+<div class="anode"><div class="abox" style="border-color:var(--green)"><div class="ai">&#x1F5C4;</div><div class="at">MongoDB Atlas</div><div class="as">IARS Prod DB<br>Reservation + Waybill<br>Allocation + Tripplan</div></div></div>
+<div class="aarr">&#x2192;</div>
+<div class="anode"><div class="abox" style="border-color:var(--cyan)"><div class="ai">&#x1F504;</div><div class="at">Fabric Mirroring</div><div class="as">Full collections<br>(Kafka = partial)<br>Read-Only</div></div></div>
+<div class="aarr">&#x2192;</div>
+<div class="anode"><div class="abox" style="border-color:var(--accent)"><div class="ai">&#x26A1;</div><div class="at">Microsoft Fabric</div><div class="as">Lakehouse + Features<br>Temporal Engine<br>All Processing</div></div></div>
+<div class="aarr">&#x2192;</div>
+<div class="anode"><div class="abox" style="border-color:var(--purple)"><div class="ai">&#x1F9E0;</div><div class="at">Prediction Engine</div><div class="as">Two-Stage Pipeline<br>Day-of-Week Anchored<br>Shock Event Aware</div></div></div>
+<div class="aarr">&#x2192;</div>
+<div class="anode"><div class="abox" style="border-color:var(--orange)"><div class="ai">&#x1F4CA;</div><div class="at">INOC Interface</div><div class="as">Power BI + API<br>Morning Briefing<br>Approve/Reject</div></div></div>
+</div>
+</div>
+
+<h3>Technology Stack</h3>
+<div class="tw"><table>
+<thead><tr><th>Layer</th><th>Technology</th><th>Purpose</th></tr></thead>
+<tbody>
+<tr><td>Source DB</td><td><strong>MongoDB Atlas</strong></td><td>IARS production data (read-only access)</td></tr>
+<tr><td>Integration</td><td><strong>Fabric Mirroring + optional Kafka</strong></td><td>Full collection sync for training. Kafka for real-time event stream (Phase 2).</td></tr>
+<tr><td>Processing</td><td><strong>Microsoft Fabric (Lakehouse)</strong></td><td>All data engineering, temporal feature engineering, storage</td></tr>
+<tr><td>ML Training</td><td><strong>Fabric ML / Azure ML + MLflow</strong></td><td>Model training, experiment tracking, registry, bi-weekly retrain</td></tr>
+<tr><td>Inference</td><td><strong>Managed Endpoints</strong></td><td>Batch (morning + pre-cutoff) + on-demand single-train (&lt;2s)</td></tr>
+<tr><td>Explainability</td><td><strong>SHAP + Azure OpenAI</strong></td><td>Feature importance + narrative explanations</td></tr>
+<tr><td>Visualization</td><td><strong>Power BI</strong></td><td>INOC dashboards + accuracy tracking</td></tr>
+<tr><td>NLP (Phase 2)</td><td><strong>Azure OpenAI (GPT-4) + RAG</strong></td><td>Chat-based interface: "What should I expect for I010 Thursday?"</td></tr>
+</tbody></table></div>
+
+<h3>CSX Systems Map</h3>
+<div class="cb"><span class="k">OPERATIONAL SYSTEMS</span>
+
+<span class="f">IARS</span> (iars.csx.com) — Intermodal Allocations &amp; Reservations
+  Tabs: Dashboard, Allocations, Allocation Usage, Reservations, Bouncer, Standby, Tiers
+  DB: MongoDB Atlas (intermodalAllocReservProd)
+
+<span class="f">RTOP</span> (rtop.csx.com) — Real-Time Train Tracking
+  <span class="c">→ Phase 2: live train ETA for same-day demand adjustments</span>
+
+<span class="f">TPS</span> — Train Profile System (routes, stations, schedules)
+<span class="f">Gate Management</span> — gate-in/out timestamps (arrival ground truth)
+<span class="f">CSX Rule Engine</span> — in development by CSX for base automation rules
+
+<span class="k">DECISION CENTER</span>
+
+<span class="f">INOC</span> — Intermodal Network Operations Center (centralized)
+  Makes all allocation adjustment decisions
+  Terminals provide constraints ("Do Not Touch" list)
+  Currently: manual spreadsheets, marker-on-glass-wall tracking
+
+<span class="f">Commercial Team</span> — manages standing agreements with customers
+  Must be notified for any long-term standing changes
+  Big 3 (UPS, Walmart, FedEx) on "dynamic" self-managed allocations</div>
+</section>
+
+<div class="sep"></div>
+
+<!-- ========== S8: PHASES ========== -->
+<section id="phases" class="fin">
+<span class="slabel">Section 08</span>
+<h2>Phase Scope</h2>
+
+<div class="phase p1">
+<span class="ptag g">Phase 1 — Demand Prediction + Allocation Intelligence</span>
+<h3 style="margin-top:0">Predict, Recommend, Learn — with INOC as the decision-maker</h3>
+<div class="two"><div>
+<h4>Core Deliverables</h4>
+<div class="cl">
+<div class="cli"><span class="ci g">&#10003;</span><span>Day-of-week anchored demand prediction engine (all 6 temporal dimensions)</span></div>
+<div class="cli"><span class="ci g">&#10003;</span><span>Two-stage pipeline: gross demand + per-customer no-show → net expected arrivals</span></div>
+<div class="cli"><span class="ci g">&#10003;</span><span>Morning briefing: today's predictions for all ~80 originating trains</span></div>
+<div class="cli"><span class="ci g">&#10003;</span><span>Significance threshold: only surface meaningful recommendations</span></div>
+<div class="cli"><span class="ci g">&#10003;</span><span>Configurable rule engine for open space automation (with INOC approval)</span></div>
+<div class="cli"><span class="ci g">&#10003;</span><span>Shock event tagging system — operator-flagged anomaly exclusion</span></div>
+<div class="cli"><span class="ci g">&#10003;</span><span>Human-in-the-loop workflow (approve/reject/modify + feedback capture)</span></div>
+<div class="cli"><span class="ci g">&#10003;</span><span>Continuous accuracy tracking (predicted vs. actual, trending over time)</span></div>
+<div class="cli"><span class="ci g">&#10003;</span><span>SHAP explainability + narrative generation for every recommendation</span></div>
+<div class="cli"><span class="ci g">&#10003;</span><span>Lead-time-to-utilization analysis (hours before cutoff vs. % space used)</span></div>
+<div class="cli"><span class="ci g">&#10003;</span><span>5 Power BI dashboards</span></div>
+<div class="cli"><span class="ci g">&#10003;</span><span>Pilot at 2–3 terminals → phased rollout</span></div>
+</div></div><div>
+<h4>Models Deployed</h4>
+<div class="cl">
+<div class="cli"><span class="ci b">&#x25B8;</span><span>Weekday-Weighted Historical (baseline)</span></div>
+<div class="cli"><span class="ci b">&#x25B8;</span><span>Prophet (seasonal + holiday)</span></div>
+<div class="cli"><span class="ci b">&#x25B8;</span><span>XGBoost / LightGBM (multi-feature)</span></div>
+<div class="cli"><span class="ci b">&#x25B8;</span><span>Ensemble Meta-Model (stacking)</span></div>
+<div class="cli"><span class="ci b">&#x25B8;</span><span>No-Show Classification (per customer)</span></div>
+<div class="cli"><span class="ci b">&#x25B8;</span><span>Isolation Forest (anomaly detection)</span></div>
+<div class="cli"><span class="ci b">&#x25B8;</span><span>Configurable Rule Engine</span></div>
+</div>
+<h4 style="margin-top:20px">Prediction Tiers</h4>
+<div class="cl">
+<div class="cli"><span class="ci b">&#x25B8;</span><span>Strategic: weekly network-wide trend analysis</span></div>
+<div class="cli"><span class="ci b">&#x25B8;</span><span>Tactical: daily morning briefing + pre-cutoff refresh</span></div>
+</div>
+</div></div>
+</div>
+
+<div class="phase p2">
+<span class="ptag p">Phase 2 — Real-Time Intelligence + Automation</span>
+<div class="cl">
+<div class="cli"><span class="ci b">&#x25B8;</span><span>RTOP real-time train ETA integration for same-day demand adjustments</span></div>
+<div class="cli"><span class="ci b">&#x25B8;</span><span>Automated execution after INOC approval (no manual step)</span></div>
+<div class="cli"><span class="ci b">&#x25B8;</span><span>Chat-based interface: "What should I expect for Train I010 this Thursday?"</span></div>
+<div class="cli"><span class="ci b">&#x25B8;</span><span>Dynamic customer prioritization during constrained periods</span></div>
+<div class="cli"><span class="ci b">&#x25B8;</span><span>Weather API integration</span></div>
+<div class="cli"><span class="ci b">&#x25B8;</span><span>What-if scenario simulation</span></div>
+<div class="cli"><span class="ci b">&#x25B8;</span><span>Integration with CSX Rule Engine for coordinated automation</span></div>
+</div>
+</div>
+</section>
+
+<div class="sep"></div>
+
+<!-- ========== S9: DASHBOARDS ========== -->
+<section id="reporting" class="fin">
+<span class="slabel">Section 09</span>
+<h2>Dashboards &amp; Reporting</h2>
+
+<div class="grid">
+<div class="card" style="border-top:3px solid var(--green)"><h4>1. Morning Briefing / INOC Command Center</h4><p>Today's predictions for all originating trains. Color-coded: green (within allocation), orange (tight), red (over-demand). Only actionable items highlighted. Terminal-level and train-level drill-down.</p></div>
+<div class="card" style="border-top:3px solid var(--accent)"><h4>2. Prediction Accuracy Tracker</h4><p>Predicted vs. actual — daily, weekly, monthly. Accuracy by terminal, train, day-of-week, customer. Trend line: is the model improving? Chang's requirement: continuous measurement of success.</p></div>
+<div class="card" style="border-top:3px solid var(--purple)"><h4>3. Demand Forecast View</h4><p>Gross reservations vs. net expected arrivals. 7-day and 30-day horizon. Day-of-week demand curves per train. Seasonal overlay (this year vs. last year at same weekday position).</p></div>
+<div class="card" style="border-top:3px solid var(--orange)"><h4>4. Standing Utilization Intelligence</h4><p>Per-customer utilization by day-of-week. Phantom-blocked space quantification. Customers with consistently low utilization flagged for commercial review. Not daily action — strategic, quarterly.</p></div>
+<div class="card" style="border-top:3px solid var(--pink)"><h4>5. Recommendations &amp; Feedback</h4><p>Pending recommendations queue. Approval/rejection tracking. Acceptance rate trending. Operator feedback patterns. Lead-time-to-utilization analysis.</p></div>
+</div>
+</section>
+
+<div class="sep"></div>
+
+<!-- ========== S10: MOCKUPS ========== -->
+<section id="mockups" class="fin">
+<span class="slabel">Section 10</span>
+<h2>UI Mockup — INOC Morning Briefing</h2>
+
+<div class="mock">
+<div class="mtbar"><span class="mdot r"></span><span class="mdot y"></span><span class="mdot g"></span><span style="flex:1;text-align:center;font-size:11.5px;color:var(--text2)">IARS AI — INOC Morning Briefing — Thursday March 5, 2026</span></div>
+<div class="mcont" style="font-size:13.5px">
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:18px">
+<div style="background:rgba(0,214,143,.08);border:1px solid rgba(0,214,143,.15);border-radius:8px;padding:12px;text-align:center"><div style="font-size:24px;font-weight:800;color:var(--green)">76</div><div style="font-size:10px;color:var(--text2)">Trains Today</div></div>
+<div style="background:rgba(79,143,255,.08);border:1px solid rgba(79,143,255,.15);border-radius:8px;padding:12px;text-align:center"><div style="font-size:24px;font-weight:800;color:var(--accent2)">12</div><div style="font-size:10px;color:var(--text2)">Need Attention</div></div>
+<div style="background:rgba(255,160,51,.08);border:1px solid rgba(255,160,51,.15);border-radius:8px;padding:12px;text-align:center"><div style="font-size:24px;font-weight:800;color:var(--orange)">4</div><div style="font-size:10px;color:var(--text2)">Over-Demand Risk</div></div>
+<div style="background:rgba(0,214,143,.08);border:1px solid rgba(0,214,143,.15);border-radius:8px;padding:12px;text-align:center"><div style="font-size:24px;font-weight:800;color:var(--green)">91.4%</div><div style="font-size:10px;color:var(--text2)">Model Accuracy (7d)</div></div>
+</div>
+
+<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:8px;border-left:3px solid var(--orange)">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><div><strong style="color:var(--text);font-size:14px">Train I010 — Bedford Park → Pt. Newark</strong><div style="font-size:11px;color:var(--text2)">Thursday | Gate Cutoff: 12:00 | 1st Thursday of March</div></div><span style="background:rgba(255,160,51,.12);color:var(--orange);padding:3px 10px;border-radius:100px;font-size:10px;font-weight:700">OVER-DEMAND</span></div>
+<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:10px;text-align:center">
+<div style="background:var(--bg3);border-radius:6px;padding:8px"><div style="font-size:10px;color:var(--text2)">Allocated</div><div style="font-size:18px;font-weight:700;color:var(--text)">170</div></div>
+<div style="background:var(--bg3);border-radius:6px;padding:8px"><div style="font-size:10px;color:var(--text2)">Predicted Net</div><div style="font-size:18px;font-weight:700;color:var(--orange)">183</div></div>
+<div style="background:var(--bg3);border-radius:6px;padding:8px"><div style="font-size:10px;color:var(--text2)">Gap</div><div style="font-size:18px;font-weight:700;color:var(--red)">+13</div></div>
+<div style="background:var(--bg3);border-radius:6px;padding:8px"><div style="font-size:10px;color:var(--text2)">Confidence</div><div style="font-size:18px;font-weight:700;color:var(--accent)">±8</div></div>
+<div style="background:var(--bg3);border-radius:6px;padding:8px"><div style="font-size:10px;color:var(--text2)">Trend</div><div style="font-size:18px;font-weight:700;color:var(--green)">↑</div></div>
+</div>
+<div style="font-size:12px;color:var(--text2);margin-bottom:8px"><strong style="color:var(--text)">Why:</strong> Last 4 Thursdays averaged 187 net. Trend ↑2.7/week. UPS at 90% utilization (Thu pattern). 3 waybills created, expecting more. Standby queue: 4 waiting.</div>
+<div style="display:flex;gap:8px"><button style="background:var(--green);color:white;border:none;padding:6px 16px;border-radius:5px;font-weight:600;cursor:pointer;font-family:inherit;font-size:12px">&#x2713; Add 15 Opens</button><button style="background:var(--orange);color:white;border:none;padding:6px 16px;border-radius:5px;font-weight:600;cursor:pointer;font-family:inherit;font-size:12px">&#x270E; Modify</button><button style="background:rgba(255,255,255,.1);color:var(--text2);border:1px solid var(--border);padding:6px 16px;border-radius:5px;font-weight:600;cursor:pointer;font-family:inherit;font-size:12px">&#x2717; Reject</button></div>
+</div>
+
+<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px;border-left:3px solid var(--green)">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><div><strong style="color:var(--text);font-size:14px">Train M209 — Louisville → Bedford Park</strong><div style="font-size:11px;color:var(--text2)">Thursday | Gate Cutoff: 07:15 | 1st Thursday of March</div></div><span style="background:rgba(0,214,143,.12);color:var(--green);padding:3px 10px;border-radius:100px;font-size:10px;font-weight:700">ON TRACK</span></div>
+<div style="font-size:12px;color:var(--text2)">Allocated: 160 | Predicted Net: 148 | Gap: -12 (within buffer) | Trend: → stable. No action needed.</div>
+</div>
+</div>
+</div>
+</section>
+
+<div class="sep"></div>
+
+<!-- ========== S11: NFR ========== -->
+<section id="nfr" class="fin">
+<span class="slabel">Section 11</span>
+<h2>Non-Functional Requirements</h2>
+<div class="tw"><table>
+<thead><tr><th>Requirement</th><th>Specification</th></tr></thead>
+<tbody>
+<tr><td><strong>Reliability</strong></td><td>99.5% uptime for prediction service. Graceful degradation — rule engine fallback if ML fails.</td></tr>
+<tr><td><strong>Audit Logging</strong></td><td>Every prediction, recommendation, operator action logged with timestamp and user.</td></tr>
+<tr><td><strong>Latency</strong></td><td>Single-train prediction &lt;2s. Batch all 80 trains &lt;5 minutes. Dashboard refresh &lt;5s.</td></tr>
+<tr><td><strong>Security</strong></td><td>TLS 1.3. Azure Key Vault. Azure AD SSO. AI system outside IARS core flows.</td></tr>
+<tr><td><strong>RBAC</strong></td><td>Terminal-level permissions. INOC operators, INOC leadership, commercial team — separate views.</td></tr>
+<tr><td><strong>Scalability</strong></td><td>32+ terminals, 80+ trains/day. Extensible to 40+ terminals without architecture changes.</td></tr>
+<tr><td><strong>Monitoring</strong></td><td>Model accuracy drift detection. Automatic retrain trigger. Pipeline health dashboards.</td></tr>
+</tbody></table></div>
+</section>
+
+<div class="sep"></div>
+
+<!-- ========== S12: QUICK START ========== -->
+<section id="quickstart" class="fin">
+<span class="slabel">Section 12</span>
+<h2>Quick Start POC — Train I010</h2>
+<p class="lead">Single train, 3 weeks, tangible results. Bedford Park → Pt. Newark. Prove the prediction approach works.</p>
+
+<div class="alert s"><span class="ai2">&#x1F680;</span><div><strong>POC Focus:</strong> Extract 3 years of Thursday data for Train I010. Build day-of-week anchored baseline model. Backtest predictions against actuals. Show: "if this system existed last year, here's what it would have predicted vs. what actually happened."</div></div>
+
+<h3>POC Deliverables (3 Weeks)</h3>
+<div class="grid">
+<div class="card"><h4>1. Day-of-Week Demand Curves</h4><p>Visualize: Monday through Sunday demand patterns for I010 over 3 years. Show the variance — Thursdays vs. Saturdays. Quantify the day-of-week effect that Andrew described.</p></div>
+<div class="card"><h4>2. Baseline Prediction Model</h4><p>Weekday-anchored model producing 1/7-day predictions. Backtested against 12 months of actuals. Show MAPE by day-of-week. "The model would have been ±X% accurate."</p></div>
+<div class="card"><h4>3. Per-Customer Utilization Report</h4><p>Each standing customer's INGAT/NOSHW ratio by day-of-week. Who no-shows on Mondays but always shows on Thursdays? Quantify phantom-blocked space.</p></div>
+<div class="card"><h4>4. Lead-Time-to-Utilization Analysis</h4><p>When INOC added space historically, how far before cutoff was it added, and what % was used? Find the sweet spot — the explicit ask from operations.</p></div>
+<div class="card"><h4>5. 10 Sample Recommendations</h4><p>Historical recommendations with full explainability. "On this Thursday, the model would have recommended adding 12 opens because..." Compare to what actually happened.</p></div>
+<div class="card"><h4>6. Shock Event Identification</h4><p>Flag historical anomaly days in the I010 data. Show: with vs. without those days, how does prediction accuracy change? Validate the exclusion approach.</p></div>
+</div>
+</section>
+
+</div><!-- end wrap -->
+
+<div class="foot">
+<p style="margin:0"><strong>CSX IARS — AI Demand Prediction &amp; Allocation Intelligence</strong></p>
+<p style="margin:4px 0 0">360° Technical Blueprint v2 | February 2026 | Confidential</p>
+</div>
+
+<script>
+function st(e,id){const c=e.target.closest('.tabs');c.querySelectorAll('.tbtn').forEach(b=>b.classList.remove('on'));c.querySelectorAll('.tpan').forEach(p=>p.classList.remove('on'));e.target.classList.add('on');document.getElementById(id).classList.add('on')}
+const ob=new IntersectionObserver(e=>{e.forEach(x=>{if(x.isIntersecting)x.target.classList.add('vis')})},{threshold:.08});
+document.querySelectorAll('.fin').forEach(el=>ob.observe(el));
+</script>
+</body>
+</html>
