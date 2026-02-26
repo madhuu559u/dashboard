@@ -1,0 +1,1124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Railroad Operations Intelligence Platform</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        *{font-family:'DM Sans',system-ui,sans-serif;box-sizing:border-box}
+        .mono{font-family:'JetBrains Mono',monospace}
+        .rail-grad{background:linear-gradient(135deg,#0B1929 0%,#0D2847 40%,#1A1A2E 100%)}
+        .accent-grad{background:linear-gradient(135deg,#00B4D8 0%,#0077B6 50%,#023E8A 100%)}
+        .glass{background:rgba(255,255,255,0.04);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.08)}
+        .gl{background:rgba(255,255,255,0.06)}
+        .tab-on{background:linear-gradient(135deg,#00B4D8,#0077B6);color:#fff;box-shadow:0 4px 15px rgba(0,180,216,0.3)}
+        @keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+        .anim{animation:fadeUp .5s ease-out forwards}
+        @keyframes glow{0%,100%{box-shadow:0 0 5px rgba(0,180,216,.3)}50%{box-shadow:0 0 20px rgba(0,180,216,.6)}}
+        .pulse-b{animation:glow 2s ease-in-out infinite}
+        .hide-scroll::-webkit-scrollbar{display:none}.hide-scroll{-ms-overflow-style:none;scrollbar-width:none}
+        @keyframes heroFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+        @keyframes countUp{from{opacity:0;transform:translateY(15px) scale(0.9)}to{opacity:1;transform:translateY(0) scale(1)}}
+        @keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+        .hero-float{animation:heroFloat 4s ease-in-out infinite}
+        .hero-stat{animation:countUp .6s ease-out forwards;opacity:0}
+        .hero-stat:nth-child(1){animation-delay:.1s}
+        .hero-stat:nth-child(2){animation-delay:.25s}
+        .hero-stat:nth-child(3){animation-delay:.4s}
+        .hero-stat:nth-child(4){animation-delay:.55s}
+        .shimmer-text{background:linear-gradient(90deg,#00B4D8 0%,#90E0EF 25%,#CAF0F8 50%,#90E0EF 75%,#00B4D8 100%);background-size:200% auto;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:shimmer 3s linear infinite}
+        @keyframes pulseRing{0%{transform:scale(1);opacity:.6}100%{transform:scale(1.8);opacity:0}}
+        .pulse-ring::after{content:'';position:absolute;inset:0;border-radius:9999px;border:2px solid #00B4D8;animation:pulseRing 2s ease-out infinite}
+        @media(max-width:768px){
+            .resp-table thead{display:none}
+            .resp-table tbody tr{display:block;margin-bottom:12px;border-radius:12px;padding:16px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08)}
+            .resp-table tbody td{display:flex;justify-content:space-between;align-items:flex-start;padding:6px 0;border:none!important}
+            .resp-table tbody td::before{content:attr(data-label);font-weight:600;font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:0.05em;flex-shrink:0;margin-right:12px}
+        }
+        @media(max-width:640px){
+            .nav-tabs{gap:4px!important}
+            .nav-tabs button{font-size:10px!important;padding:5px 8px!important}
+        }
+    </style>
+</head>
+<body class="bg-[#0B1929] text-white">
+<div id="root"></div>
+<script type="text/babel">
+const {useState,useEffect}=React;
+
+/* ─── DATA ─── */
+const D={
+    date:'January 27, 2026',dur:'2h 33m',
+    vel:{e2e:20.21,e2e_p:18.4,stb:26.2,stb_p:24.8},
+    trains:198,late:57,ll:25,crew:{t:13,h:7,a:6},
+    headcount:7181,hcUp:8,sick:579,sickDn:246,recrews:5,
+    themes:[
+        {t:'Frozen/Failed Switches',c:28,s:'critical',l:'Nashville, Cleveland, Toledo, Birmingham, Florence, Baltimore'},
+        {t:'Crew Shortages/Mark-offs',c:22,s:'high',l:'Nashville, Walbridge, Cumberland, Russell, Connellsville'},
+        {t:'Weather Impact (Snow/Cold)',c:18,s:'high',l:'Buffalo, Syracuse, Nashville, Cleveland'},
+        {t:'Broken Rail/Track Lights',c:14,s:'high',l:'Rigby, Rochester, Jacksonville, Florence, Cincinnati'},
+        {t:'Terminal Congestion',c:12,s:'medium',l:'Nashville/Radnor, Selkirk, Northwest/Cleveland'},
+        {t:'Air Brake/Mechanical',c:9,s:'medium',l:'Buffalo, Garrett, Newcastle, Jacksonville'},
+        {t:'Derailments',c:3,s:'critical',l:'Rigby (M42726), Chambersburg (industry)'}
+    ],
+    terminals:[
+        {n:'Nashville / Radnor',st:'critical',i:8,d:'Frozen switches throughout yard & N Radnor crossover. Hump/pool production down. Manual switches freezing. Domino cascade on departures. Sparking car on M585.',lead:'Tyler Hale / Brad McDaniel'},
+        {n:'Cleveland / Northwest',st:'warning',i:5,d:'3 switch failures on Greenwich Sub, 1 on Erie West. Yard congestion. UR access issues overnight.',lead:'Marco Guerriri'},
+        {n:'Selkirk / Albany',st:'warning',i:4,d:'2-hour spacing (tightening to 90 min). Broken rail Rochester Sub. Warm bearing M634. IO10 failed train check.',lead:'John Keblis'},
+        {n:'Rigby / Portland',st:'critical',i:3,d:'Active derailment M42726 trailing loco + IANR 624474. Switch point replacement + broken rail. Environmental cleanup.',lead:'Joshua Meuse'},
+        {n:'Birmingham',st:'warning',i:3,d:'Merrily switch work window 5-9. Holding multiple trains. Single-tracking through terminal.',lead:'Brendon Perkins'},
+        {n:'Jacksonville / Waycross',st:'warning',i:4,d:'Multiple broken rails (Morgan, Fitzgerald). Crew standby failures. IO2525 delayed. M60526 1.5hr delay.',lead:'Jonathan Malcolm'},
+        {n:'Florence / Collier',st:'warning',i:5,d:'All switches at Collier frozen. Bellwood problems. Track light Rockets. Strip joint Purvis.',lead:'Blake Humber'}
+    ],
+    pTrains:[
+        {t4:'M585',t6:'M58527',term:'Nashville',iss:['2.5hr switch delay N Radnor','Sparking car found','Shoved back into yard','Recrew required'],imp:'RECREW'},
+        {t4:'M427',t6:'M42726',term:'Rigby',iss:['Trailing loco derailed','Car IANR 624474','Switch point+broken rail','Environmental cleanup'],imp:'DERAIL'},
+        {t4:'IO25',t6:'IO2525',term:'Jacksonville',iss:['Broken rail delay Morgan','~30 min lost','Fitzgerald broken rail'],imp:'LATE UPS'},
+        {t4:'M634',t6:'M63425',term:'Buffalo→Selkirk',iss:['Warm bearing QC 313.7','Mandatory set-off','Recrued at Syracuse'],imp:'RECREW'},
+        {t4:'N565',t6:'N56524',term:'Garrett',iss:['Air stuck 58 PSI','Cut ~2000ft','6.5hr, recrued'],imp:'RECREW'},
+        {t4:'M605',t6:'M60526',term:'Jacksonville',iss:['Broken rail Morgan','1.5hr reverse 10mi','Switch crew at Malk'],imp:'DELAY'},
+        {t4:'M802',t6:'M80226',term:'Birmingham',iss:['Crew rest drop 0255','827 air issues','Delayed departure'],imp:'ITD'}
+    ],
+    constraints:[
+        {ty:'Physical',n:'N Radnor Crossover Switch',ca:'Frozen in sub-zero, completely locked — 2.5hr cascade',sol:'Station maintainer during cold events (Longcoy directive)',loc:'Nashville',ind:'Temp <20°F + wind'},
+        {ty:'Physical',n:'Greenwich Sub Switches (3)',ca:'Wind-packed snow faster than clearing',sol:'Preemptive clearing, staged maintainers',loc:'Cleveland',ind:'Snow + wind advisory'},
+        {ty:'Physical',n:'Rigby Derailment Infrastructure',ca:'Switch point stock rail failure + broken rail',sol:'Replace switch point; 1hr single track / 5hr siding',loc:'Portland/Rigby',ind:'Unplanned'},
+        {ty:'Procedural',n:'Crew Mark-offs (double digits)',ca:'Weather sick calls, 18 locations with 10+',sol:'Proactive lineup requests, targeted coverage',loc:'Nashville, Birmingham, Louisville',ind:'>10 mark-offs/location'},
+        {ty:'Procedural',n:'Selkirk 2-Hour Spacing',ca:'Terminal congestion, capacity management',sol:'Tighten to 90-min spacing',loc:'Selkirk',ind:'>5 trains queued inbound'},
+        {ty:'Procedural',n:'Crew Standby Tracking Failure',ca:'"Wishing instead of making it happen" — Zach Smith',sol:'Active crew standby verification, real-time tracking',loc:'Jacksonville/Waycross',ind:'Train <30min to outlaw + no confirmed crew'},
+        {ty:'Physical',n:'Collier Yard — All Switches Frozen',ca:'Overnight freeze, no preemptive treatment',sol:'Pre-position heating teams, Rex Carter 7:30 dispatch',loc:'Florence/Collier',ind:'Overnight <15°F'}
+    ],
+    lessons:[
+        {issue:'N Radnor switch froze causing 4-5hr cascade across M585, X502, M533',insight:'George Longcoy: "Station someone at N Radnor during cold events — toughest spot"',sop:'1) Monitor forecast for <20°F Nashville\n2) Pre-position maintainer 2hrs before cold front\n3) Confirm switch operation every 30min\n4) Escalate immediately if fails to lock'},
+        {issue:'Sparking car on M585 missed at outbound inspection — body resting on wheels',insight:'Darren Gamble: checking industry overload; car inspected 2 days prior',sop:'1) Inspect loaded cars from multiple angles incl top\n2) Flag industries with overload history\n3) Re-inspect cars stationary >48hrs\n4) Track industry-specific loading issues'},
+        {issue:'Jacksonville crew standby — 806 at 18min, no crew, 543 trapped behind dead train',insight:'Zach Smith: "Way too passive tracking crews — wishing stuff gonna happen"',sop:'1) When train <60min to outlaw, verify standby location\n2) Confirm van dispatch + ETA\n3) Backup crew plan if primary >30min away\n4) Notify dispatch of blocking risk'}
+    ]
+};
+
+const SECS=[
+    {n:1,t:'Date Range & Source Files',cat:'found',d:'Transcript range description'},
+    {n:2,t:'Operational Theme Counts',cat:'found',d:'Sum by type/theme, ordered by count'},
+    {n:3,t:'Lines of Business Impact',cat:'found',d:'Sum by type, ordered by count'},
+    {n:4,t:'Terminal Recurring Issues',cat:'anal',d:'Repeat terminals, patterns, causality'},
+    {n:5,t:'Customer Issues',cat:'anal',d:'Repeat customers, patterns, locations'},
+    {n:6,t:'Problem Trains (Train-4)',cat:'anal',d:'Repeat trains by Train-4 across days'},
+    {n:7,t:'Geographical Patterns',cat:'anal',d:'Location-based trends'},
+    {n:8,t:'Crew Issues Heatmap',cat:'anal',d:'Re-crews, OT, injuries, safety'},
+    {n:9,t:'Locomotive & Crew Cause-Effect',cat:'anal',d:'Impact analysis for proactive mgmt'},
+    {n:10,t:'Business Function Analysis',cat:'agent',d:'Operations sub-function agents'},
+    {n:11,t:'High-Touch Topics',cat:'gap',d:'What we over-discuss — gap analysis'},
+    {n:12,t:'Low-Touch Topics',cat:'gap',d:'What we under-discuss — hidden value'},
+    {n:13,t:'Lessons Learned & SOPs',cat:'ops',d:'Leadership insights → SOPs'},
+    {n:14,t:'Constraints Classification',cat:'ops',d:'Physical vs Procedural + solutions'},
+    {n:15,t:'General Conclusions',cat:'ops',d:'Additional improvement insights'},
+    {n:16,t:'Prompt Engineering',cat:'imp',d:'How to refine calls for AI'},
+    {n:17,t:'Tone & Coaching',cat:'imp',d:'Speaker analysis, coaching'}
+];
+
+const CC={
+    found:{bg:'bg-cyan-500/10',bo:'border-cyan-500/30',tx:'text-cyan-400',lb:'Foundation'},
+    anal:{bg:'bg-blue-500/10',bo:'border-blue-500/30',tx:'text-blue-400',lb:'Deep Analysis'},
+    agent:{bg:'bg-purple-500/10',bo:'border-purple-500/30',tx:'text-purple-400',lb:'Business Agents'},
+    gap:{bg:'bg-amber-500/10',bo:'border-amber-500/30',tx:'text-amber-400',lb:'Gap Analysis'},
+    ops:{bg:'bg-green-500/10',bo:'border-green-500/30',tx:'text-green-400',lb:'Operational Output'},
+    imp:{bg:'bg-rose-500/10',bo:'border-rose-500/30',tx:'text-rose-400',lb:'Improvement'}
+};
+
+function ic(imp){return imp==='DERAIL'?'bg-red-600 text-white':imp==='RECREW'?'bg-orange-500 text-white':imp==='LATE UPS'?'bg-yellow-500 text-black':imp==='ITD'?'bg-purple-500 text-white':'bg-yellow-500 text-black'}
+function sc(s){return s==='critical'?'bg-red-500':s==='warning'?'bg-yellow-500':'bg-green-500'}
+function stx(s){return s==='critical'?'text-red-400':s==='warning'?'text-yellow-400':'text-green-400'}
+function sev(s){return s==='critical'?'bg-red-500':s==='high'?'bg-orange-500':'bg-yellow-500'}
+
+/* ─── APP ─── */
+function App(){
+    const [tab,setTab]=useState('overview');
+    const tabs=[
+        {id:'overview',l:'Overview',icon:'◈'},
+        {id:'challenge',l:'Challenge',icon:'⚡'},
+        {id:'proactive',l:'Proactive Vision',icon:'🔮'},
+        {id:'solution',l:'Solution',icon:'🧠'},
+        {id:'architecture',l:'Architecture',icon:'☁️'},
+        {id:'output',l:'17 Sections',icon:'📋'},
+        {id:'context',l:'Context Framework',icon:'⚙️'},
+        {id:'dashboard',l:'Dashboard',icon:'📊'},
+        {id:'transcript',l:'Analysis',icon:'🔍'},
+        {id:'roadmap',l:'Roadmap',icon:'🚀'}
+    ];
+
+    return (
+        <div className="min-h-screen">
+            <header className="rail-grad border-b border-white/10 sticky top-0 z-50">
+                <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
+                    <div className="flex items-center gap-3 sm:gap-4">
+                        <div className="w-9 h-9 sm:w-11 sm:h-11 accent-grad rounded-xl flex items-center justify-center font-bold text-xs sm:text-sm mono flex-shrink-0">ROI</div>
+                        <div className="min-w-0">
+                            <h1 className="font-bold text-[13px] sm:text-[15px] tracking-wide truncate">Railroad Operations Intelligence</h1>
+                            <p className="text-[10px] sm:text-[11px] text-cyan-300/60 tracking-widest uppercase truncate">Proactive BI • Theory of Constraints • Azure Cloud</p>
+                        </div>
+                    </div>
+                    <div className="hidden md:flex items-center gap-3 text-xs text-slate-400 flex-shrink-0">
+                        <span className="glass px-3 py-1.5 rounded-lg">Confidential</span>
+                        <span className="glass px-3 py-1.5 rounded-lg">February 2026</span>
+                    </div>
+                </div>
+            </header>
+
+            <nav className="bg-[#0D1B2A]/95 border-b border-white/5 sticky top-[48px] sm:top-[52px] z-40 backdrop-blur-xl">
+                <div className="max-w-[1400px] mx-auto px-3 sm:px-6 py-2">
+                    <div className="flex gap-1 sm:gap-1.5 overflow-x-auto hide-scroll nav-tabs">
+                        {tabs.map(t=>(
+                            <button key={t.id} onClick={()=>setTab(t.id)}
+                                className={`px-3 sm:px-4 py-2 text-[11px] sm:text-[13px] font-medium whitespace-nowrap rounded-lg transition-all flex items-center gap-1.5 ${tab===t.id?'tab-on':'text-slate-400 hover:text-white hover:bg-white/5'}`}>
+                                <span className="hidden sm:inline">{t.icon}</span>{t.l}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            </nav>
+
+            <main className="max-w-[1400px] mx-auto px-4 sm:px-6 py-6 sm:py-8">
+                {tab==='overview'&&<Overview/>}
+                {tab==='challenge'&&<Challenge/>}
+                {tab==='proactive'&&<ProactiveVision/>}
+                {tab==='solution'&&<Solution/>}
+                {tab==='architecture'&&<Architecture/>}
+                {tab==='output'&&<Output/>}
+                {tab==='context'&&<ContextFramework/>}
+                {tab==='dashboard'&&<Dashboard/>}
+                {tab==='transcript'&&<Transcript/>}
+                {tab==='roadmap'&&<Roadmap/>}
+            </main>
+
+            <footer className="border-t border-white/5 py-6 text-center text-xs text-slate-600">
+                Railroad Operations Intelligence Platform • Confidential • February 2026
+            </footer>
+        </div>
+    );
+}
+
+/* ─── OVERVIEW ─── */
+function Overview(){
+    return (
+        <div className="space-y-8 anim">
+            {/* Hero */}
+            <div className="relative glass rounded-2xl p-6 sm:p-10 overflow-hidden">
+                <div className="absolute inset-0 accent-grad opacity-[0.06]"></div>
+                <div className="relative z-10">
+                    <div className="flex items-center gap-2 mb-3">
+                        <span className="px-3 py-1 bg-cyan-500/10 border border-cyan-500/30 rounded-full text-xs text-cyan-400 font-medium">AI-Powered</span>
+                        <span className="px-3 py-1 bg-green-500/10 border border-green-500/30 rounded-full text-xs text-green-400 font-medium">Proactive-First</span>
+                    </div>
+                    <h2 className="text-2xl sm:text-4xl font-extrabold leading-tight mb-3">
+                        Turn Every Status Call Into<br/><span className="shimmer-text">Strategic, Proactive Intelligence</span>
+                    </h2>
+                    <p className="text-slate-400 max-w-3xl text-sm sm:text-base leading-relaxed mb-6">
+                        An AI engine that doesn't just report what happened — it tells you what's about to happen, what to do about it, and why, by mining years of operational conversations into a living knowledge base.
+                    </p>
+                    <div className="flex flex-wrap gap-3 sm:gap-4">
+                        {[{v:'1,000+',l:'Transcripts Available',s:'3 daily calls × 1yr'},
+                          {v:'2.5hr',l:'Avg Call Duration',s:'0600 · 1545 · Midnight'},
+                          {v:'17',l:'Analysis Sections',s:'Daily + Range'},
+                          {v:'3-Stage',l:'Context Refinement',s:'SOP → Constraint → Framework'}
+                        ].map((s,i)=>(
+                            <div key={i} className="hero-stat glass rounded-xl px-4 sm:px-5 py-3 sm:py-4 text-center min-w-[120px]">
+                                <div className="mono font-bold text-lg sm:text-xl text-cyan-400">{s.v}</div>
+                                <div className="text-[10px] sm:text-xs text-slate-300 font-medium">{s.l}</div>
+                                <div className="text-[9px] text-slate-500 mt-0.5">{s.s}</div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+
+            {/* What / Does / Helps */}
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+                {[{c:'cyan',t:'What It Is',d:'An AI-powered BI engine that converts thousands of hours of operational railroad conversations into structured, proactive intelligence — stored across relational, vector, and graph databases.'},
+                  {c:'blue',t:'What It Does',d:'Ingests daily transcripts (0600, 1545, midnight), extracts every train/terminal/crew issue, builds context-sensitive frameworks, and pushes insights before problems materialize.'},
+                  {c:'green',t:'How It Helps',d:'Moves operations from reactive ("we have congestion") to proactive ("Montgomery is about to get 7 trains in 2 hours — last time, we lost 18 hours of delay"). Feeds RTOP & SOP systems.'}
+                ].map((card,i)=>(
+                    <div key={i} className="glass rounded-xl p-5 sm:p-6">
+                        <div className={`w-10 h-1 rounded mb-3 ${card.c==='cyan'?'bg-cyan-400':card.c==='blue'?'bg-blue-400':'bg-green-400'}`}></div>
+                        <h3 className="text-lg font-bold mb-2">{card.t}</h3>
+                        <p className="text-sm text-slate-300 leading-relaxed">{card.d}</p>
+                    </div>
+                ))}
+            </div>
+
+            {/* The Big Idea — Proactive Push */}
+            <div className="glass rounded-xl p-5 sm:p-6 border-l-4 border-cyan-500">
+                <h3 className="text-xl font-bold mb-4">🎯 The Core Principle: Push, Don't Pull</h3>
+                <p className="text-sm text-slate-300 mb-4">Users shouldn't have to know what to ask. The system proactively surfaces intelligence — connecting real-time RTOP data with years of conversational history to predict problems before they happen.</p>
+                <div className="grid sm:grid-cols-3 gap-3">
+                    {[{t:'Proactive Alerts',d:'System pushes: "Montgomery about to receive 7 trains in 2hrs — historically causes 18hr cascade"',ic:'🔔'},
+                      {t:'Conversational Q&A',d:'Ask: "How many times has M401 been a problem?" and get instant history with context',ic:'💬'},
+                      {t:'Decision Support',d:'When you change a train in RTOP — "FYI, M201 shares reciprocal power with M202"',ic:'⚡'}
+                    ].map((f,i)=>(
+                        <div key={i} className="gl rounded-lg p-4">
+                            <div className="text-2xl mb-2">{f.ic}</div>
+                            <h4 className="font-semibold text-sm text-cyan-400 mb-1">{f.t}</h4>
+                            <p className="text-xs text-slate-400">{f.d}</p>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            {/* Value Added */}
+            <div className="glass rounded-xl p-5 sm:p-6">
+                <h3 className="text-xl font-bold mb-5">💡 Value — Train Velocity & ROI</h3>
+                <div className="grid sm:grid-cols-2 gap-3">
+                    {['Proactive alerts on terminal congestion, volume surges, and constraint triggers before they cascade',
+                      'Context-sensitive rules engine per location, lane, day, and hour — built from call intelligence',
+                      'Feed RTOP tactical adjustments with historical inference (annul, reroute, reprioritize decisions)',
+                      'Feed SOP long-term planning: distinguish performance dips from weather events for accurate planning',
+                      'Detect "problem trains" (Train-4 patterns) across years — repeat locomotive failures, interchange issues',
+                      'Capture expert knowledge: "When I have congestion at Montgomery, these are the downstream impacts"'
+                    ].map((item,i)=>(
+                        <div key={i} className="flex items-start gap-3 p-3 rounded-lg bg-white/[0.02]">
+                            <span className="text-cyan-400 mt-0.5 flex-shrink-0">✓</span>
+                            <span className="text-sm text-slate-300">{item}</span>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+/* ─── CHALLENGE ─── */
+function Challenge(){
+    return (
+        <div className="space-y-8 anim">
+            <div className="text-center mb-4">
+                <div className="inline-block px-4 py-1.5 bg-red-500/10 border border-red-500/20 rounded-full text-sm text-red-400 font-medium mb-4">The Challenge</div>
+                <h2 className="text-2xl sm:text-3xl font-bold">From Reactive to Proactive Operations</h2>
+            </div>
+            <div className="grid md:grid-cols-2 gap-4 sm:gap-6">
+                <div className="glass rounded-xl p-5 sm:p-6 border-l-4 border-red-500">
+                    <h3 className="text-lg sm:text-xl font-bold text-red-400 mb-5">✕ Current State — Reactive</h3>
+                    {['Critical intelligence lost in 2.5-hour calls — never systematically captured or stored',
+                      'Same trains & terminals fail repeatedly — patterns span months, invisible to individuals',
+                      'Experts know solutions but no one documents them — knowledge lives in heads',
+                      'No way to correlate weather events with velocity dips or distinguish act-of-God from performance',
+                      'Leaders hear about congestion after it happens — "I have 4 trains holding out of the location right now"',
+                      '"We are way too passive tracking down crews — wishing stuff gonna happen instead of making it happen" — Zach Smith'
+                    ].map((item,i)=>(<div key={i} className="flex items-start gap-3 text-sm text-slate-300 mb-3"><span className="text-red-500 mt-1 flex-shrink-0">●</span><span>{item}</span></div>))}
+                </div>
+                <div className="glass rounded-xl p-5 sm:p-6 border-l-4 border-green-500">
+                    <h3 className="text-lg sm:text-xl font-bold text-green-400 mb-5">✓ Desired State — Proactive</h3>
+                    {['System proactively pushes: "Montgomery about to get crushed — 7 trains in 2hrs, you can\'t handle that"',
+                      'Before the 0600 call even happens — system simulates the agenda from RTOP + historical patterns',
+                      'Context-sensitive framework per location/lane/day/hour tells you consequences of every decision',
+                      'Weather correlation: "3-day storm caused 18 circuit failures & velocity dip — don\'t plan around this"',
+                      'RTOP integration: when you annul M201, system warns "M202 shares reciprocal power — no engines"',
+                      'SOPs with approve/reject workflow — operators validate, refine, build living knowledge base'
+                    ].map((item,i)=>(<div key={i} className="flex items-start gap-3 text-sm text-slate-300 mb-3"><span className="text-green-500 mt-1 flex-shrink-0">●</span><span>{item}</span></div>))}
+                </div>
+            </div>
+            <div className="rail-grad rounded-xl p-5 sm:p-6 border border-white/10">
+                <h3 className="text-lg font-bold mb-4">◈ Theory of Constraints — Goldratt's 5 Focusing Steps</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+                    {[{s:'1',l:'IDENTIFY',d:'Find the constraint',e:'N Radnor crossover switch'},
+                      {s:'2',l:'EXPLOIT',d:'Maximize output',e:'Station maintainer during cold'},
+                      {s:'3',l:'SUBORDINATE',d:'Align everything',e:'Space trains to Radnor capacity'},
+                      {s:'4',l:'ELEVATE',d:'Invest to lift',e:'Heated switch infrastructure'},
+                      {s:'5',l:'REPEAT',d:'Find next constraint',e:'Move to crew availability'}
+                    ].map((step,i)=>(
+                        <div key={i} className="gl rounded-lg p-3 text-center">
+                            <div className="w-7 h-7 accent-grad rounded-full flex items-center justify-center font-bold text-xs mx-auto mb-2">{step.s}</div>
+                            <div className="font-bold text-xs text-cyan-300 mb-1">{step.l}</div>
+                            <div className="text-[10px] text-slate-400">{step.d}</div>
+                            <div className="text-[9px] text-slate-600 italic mt-1">e.g., {step.e}</div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+/* ─── NEW: PROACTIVE VISION ─── */
+function ProactiveVision(){
+    return (
+        <div className="space-y-8 anim">
+            <div className="text-center mb-4">
+                <div className="inline-block px-4 py-1.5 bg-orange-500/10 border border-orange-500/20 rounded-full text-sm text-orange-400 font-medium mb-4">Proactive Vision</div>
+                <h2 className="text-2xl sm:text-3xl font-bold">Build a Windshield, Not a Rear-View Mirror</h2>
+                <p className="text-slate-400 mt-2 max-w-2xl mx-auto">"The height of our ambition can't be to synthesize all this and show it to me. That's still too late. The goal is for it to be proactive."</p>
+            </div>
+
+            {/* Push vs Pull */}
+            <div className="glass rounded-xl p-5 sm:p-6">
+                <h3 className="font-bold text-lg mb-5">🔔 Push Model — System Tells You, Not the Other Way Around</h3>
+                <div className="grid md:grid-cols-2 gap-5">
+                    <div className="gl rounded-xl p-5 border border-red-500/20">
+                        <h4 className="font-bold text-red-400 text-sm mb-3">❌ Reactive (What We're Replacing)</h4>
+                        <div className="space-y-2">
+                            {['"How many times has M401 been a problem?" — user has to know to ask',
+                              '"Show me terminal issues" — user scrolls through 50-page report',
+                              'Hearing about congestion after trains are already holding',
+                              'Velocity dips unexplained — was it weather or performance?'
+                            ].map((r,i)=>(<p key={i} className="text-xs text-slate-400 flex gap-2"><span className="text-red-400 flex-shrink-0">•</span>{r}</p>))}
+                        </div>
+                    </div>
+                    <div className="gl rounded-xl p-5 border border-green-500/20">
+                        <h4 className="font-bold text-green-400 text-sm mb-3">✅ Proactive (What We're Building)</h4>
+                        <div className="space-y-2">
+                            {['System pushes: "M401 has failed 7 times in 6 months — UP interchange scheduling disconnect"',
+                              'Alert: "Selkirk has 5 trains inbound within 90 min — exceeds processing capacity"',
+                              'Forecasted storm? "Last time: 18 circuit failures, 12hr delays in Charlotte Sub"',
+                              'Before 0600 call: "Here\'s tomorrow\'s predicted agenda based on RTOP + history"'
+                            ].map((r,i)=>(<p key={i} className="text-xs text-slate-300 flex gap-2"><span className="text-green-400 flex-shrink-0">•</span>{r}</p>))}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Scenario Examples from Ben */}
+            <div className="glass rounded-xl p-5 sm:p-6">
+                <h3 className="font-bold text-lg mb-5">📍 Real Scenarios — How Proactive Intelligence Works</h3>
+                <div className="space-y-4">
+                    {[{title:'Terminal Volume Surge — Montgomery',scenario:'7 trains converging from another railroad within 2 hours',reactive:'Ops team says on the call: "I\'m underwater at Montgomery, 4 trains holding out"',proactive:'System detects trains coming online → alerts: "Montgomery about to receive more volume than it can handle. Last 3 times this happened → trains held on mainline → crew outlawed → engines stuck → 22hr cascade"',impact:'Preemptive spacing, crew pre-positioning, rerouting before congestion hits'},
+                      {title:'Reciprocal Power — M201/M202',scenario:'Annulling M201 means M202 has no locomotives',reactive:'Someone cancels M201 without realizing M202 depends on those engines turning around',proactive:'When user attempts annulment in RTOP → system warns: "M202 shares reciprocal power with M201. Cancelling M201 means no engines for M202. Consider power rearrangement first."',impact:'Prevents cascade: no engine → no train → downstream customer impact'},
+                      {title:'Weather → Velocity Correlation',scenario:'Storm hits Charlotte Sub — lightning trips 18 track circuits',reactive:'Velocity drops for 3 days. SOP planning team thinks it\'s a performance problem.',proactive:'System correlates: "Charlotte velocity dip on Jan 15-17 = 18 false-occupancy events from lightning. Not a performance issue — don\'t plan around this in SOP."',impact:'Accurate strategic planning, correct root-cause attribution'},
+                      {title:'Repeat Locomotive Failure — CSXT 1234',scenario:'Engine CSXT 1234 keeps failing on M401/M402 pair',reactive:'Nobody connects the dots across months of calls',proactive:'System: "CSXT 1234 has had 6 fault events on M401/M402 pair since June. Both trains share this engine. Shop at each end is not resolving the issue."',impact:'Targeted mechanical intervention, stop-loss on repeat failures'}
+                    ].map((s,i)=>(
+                        <div key={i} className="gl rounded-xl p-4 sm:p-5 border border-white/5">
+                            <div className="flex items-center gap-2 mb-3 flex-wrap">
+                                <span className="font-bold text-sm text-white">{s.title}</span>
+                                <span className="text-[10px] text-slate-500 bg-white/5 px-2 py-0.5 rounded">{s.scenario}</span>
+                            </div>
+                            <div className="grid md:grid-cols-3 gap-3 text-xs">
+                                <div className="bg-red-500/5 border border-red-500/10 rounded-lg p-3">
+                                    <p className="font-bold text-red-400 mb-1 text-[10px] uppercase">Today (Reactive)</p>
+                                    <p className="text-slate-400">{s.reactive}</p>
+                                </div>
+                                <div className="bg-green-500/5 border border-green-500/10 rounded-lg p-3">
+                                    <p className="font-bold text-green-400 mb-1 text-[10px] uppercase">With ROI (Proactive)</p>
+                                    <p className="text-slate-300">{s.proactive}</p>
+                                </div>
+                                <div className="bg-cyan-500/5 border border-cyan-500/10 rounded-lg p-3">
+                                    <p className="font-bold text-cyan-400 mb-1 text-[10px] uppercase">Business Impact</p>
+                                    <p className="text-slate-300">{s.impact}</p>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            {/* Integration Targets */}
+            <div className="glass rounded-xl p-5 sm:p-6">
+                <h3 className="font-bold text-lg mb-5">🔗 Integration Endpoints — Where Intelligence Flows</h3>
+                <p className="text-sm text-slate-400 mb-4">ROI becomes a knowledge base with API endpoints. Other CSX systems consume it — we don't need to build those systems, just make insights available.</p>
+                <div className="grid sm:grid-cols-3 gap-4">
+                    <div className="gl rounded-xl p-5 border-t-2 border-cyan-500">
+                        <h4 className="font-bold text-sm mb-2">RTOP Integration</h4>
+                        <p className="text-xs text-slate-400 mb-3">Real-Time Operations Portal — currently view-only, adding tactical adjustments this year (annul, reroute, reschedule, reprioritize).</p>
+                        <p className="text-xs text-cyan-400 font-medium">ROI provides: Historical inference endpoint. When users make changes → ROI warns of consequences based on call history.</p>
+                    </div>
+                    <div className="gl rounded-xl p-5 border-t-2 border-blue-500">
+                        <h4 className="font-bold text-sm mb-2">SOP Strategic Planning</h4>
+                        <p className="text-xs text-slate-400 mb-3">Long-term strategic operating plan tool — uses historical data for network planning. Can't see conversations today.</p>
+                        <p className="text-xs text-blue-400 font-medium">ROI provides: Conversational insights that fill planning gaps. Distinguish weather from performance. Inform plan improvements.</p>
+                    </div>
+                    <div className="gl rounded-xl p-5 border-t-2 border-green-500">
+                        <h4 className="font-bold text-sm mb-2">Locomotive Power Planning</h4>
+                        <p className="text-xs text-slate-400 mb-3">System being enhanced for locomotive power allocation. Needs awareness of reciprocal power, engine failures, and pair dependencies.</p>
+                        <p className="text-xs text-green-400 font-medium">ROI provides: Engine-to-train pair history, repeat failure patterns, reciprocal power relationships from calls.</p>
+                    </div>
+                </div>
+            </div>
+
+            {/* Simulate the Call */}
+            <div className="accent-grad rounded-xl p-5 sm:p-8">
+                <h3 className="text-xl font-bold mb-3">🏁 Ultimate Vision: Simulate the 0600 Call Before It Happens</h3>
+                <p className="text-blue-100/80 text-sm mb-4">Using historical patterns + real-time RTOP train lineups + weather forecasts + crew availability, predict what ops will discuss tomorrow morning — before anyone picks up the phone.</p>
+                <div className="flex flex-wrap gap-2 sm:gap-3">
+                    {['Historical call patterns','Real-time RTOP lineups','NWS weather forecasts','Crew availability data','Train state changes','Context-sensitive rules'].map((i,j)=>(
+                        <span key={j} className="bg-white/10 rounded-lg px-3 py-2 text-xs border border-white/10">{i}</span>
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+/* ─── SOLUTION ─── */
+function Solution(){
+    return (
+        <div className="space-y-8 anim">
+            <div className="text-center mb-4">
+                <div className="inline-block px-4 py-1.5 bg-cyan-500/10 border border-cyan-500/20 rounded-full text-sm text-cyan-400 font-medium mb-4">Solution Design</div>
+                <h2 className="text-2xl sm:text-3xl font-bold">AI-Powered Operations Intelligence</h2>
+                <p className="text-slate-400 mt-2">Daily View + Range Analysis + Context-Sensitive Framework</p>
+            </div>
+
+            {/* Pipeline */}
+            <div className="glass rounded-xl p-5 sm:p-6">
+                <h3 className="font-bold text-lg mb-6">Data → Intelligence Pipeline</h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+                    {[{i:'🎙️',s:'INGEST',d:'Transcripts from Teams 0600 / 1545 / Midnight calls. Automated pull via agent.',c:'cyan'},
+                      {i:'🔍',s:'EXTRACT',d:'Trains (Train-4/6/10), terminals, customers, crew, constraints, weather, locomotives',c:'blue'},
+                      {i:'🧠',s:'ANALYZE',d:'Daily view + Range analysis + 3-stage context refinement. Store in relational + vector + graph.',c:'purple'},
+                      {i:'🔔',s:'PUSH & SERVE',d:'Proactive alerts, dashboards, Q&A chatbot, API endpoint for RTOP/SOP integration',c:'green'}
+                    ].map((stage,idx)=>(
+                        <div key={idx} className="relative gl rounded-xl p-4 sm:p-5 text-center">
+                            <div className="text-2xl sm:text-3xl mb-2 sm:mb-3">{stage.i}</div>
+                            <div className="mono font-bold text-xs sm:text-sm mb-2" style={{color:stage.c==='cyan'?'#22d3ee':stage.c==='blue'?'#60a5fa':stage.c==='purple'?'#a78bfa':'#4ade80'}}>{stage.s}</div>
+                            <p className="text-[10px] sm:text-xs text-slate-400">{stage.d}</p>
+                            {idx<3&&<div className="hidden md:block absolute top-1/2 -right-3 transform -translate-y-1/2 text-cyan-500 font-bold text-xl z-10">→</div>}
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            {/* Daily vs Range */}
+            <div className="glass rounded-xl p-5 sm:p-6">
+                <h3 className="font-bold text-lg mb-5">📊 Two Analysis Modes</h3>
+                <div className="grid md:grid-cols-2 gap-5">
+                    <div className="gl rounded-xl p-5 border border-cyan-500/20">
+                        <h4 className="font-bold text-cyan-400 mb-3">📅 Daily Analysis</h4>
+                        <p className="text-xs text-slate-400 mb-3">Single-day extraction from one transcript. Captures that day's issues, trains, constraints.</p>
+                        <div className="space-y-1">
+                            {['Theme counts & categories','Terminal issues & status','Train instances (not repeats — single day)','Crew/locomotive incidents','Lessons learned & SOPs','Constraint classification','Contextual framework snapshot'].map((r,i)=>(
+                                <p key={i} className="text-xs text-slate-300 flex gap-2"><span className="text-cyan-400 flex-shrink-0">→</span>{r}</p>
+                            ))}
+                        </div>
+                    </div>
+                    <div className="gl rounded-xl p-5 border border-blue-500/20">
+                        <h4 className="font-bold text-blue-400 mb-3">📈 Range / Network Analysis</h4>
+                        <p className="text-xs text-slate-400 mb-3">Multi-day cross-transcript analysis. Detects patterns, repeat offenders, trends over weeks/months.</p>
+                        <div className="space-y-1">
+                            {['All daily sections PLUS:','Problem trains (Train-4 repeat offenders)','Recurring terminal patterns','Geographical trends','Crew heatmaps over time','Locomotive & crew cause-effect','High/low-touch gap analysis','Refined contextual framework'].map((r,i)=>(
+                                <p key={i} className="text-xs text-slate-300 flex gap-2"><span className="text-blue-400 flex-shrink-0">→</span>{r}</p>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+                <div className="mt-4 p-3 bg-amber-500/5 border border-amber-500/10 rounded-lg">
+                    <p className="text-xs text-amber-400"><strong>Note — Train-4 Identity:</strong> Train profiles change tactically (M401 may run A→E one day, A→C the next). Extra trains are one-offs. The system uses Train-10 format (M401-25-02-26 = month+year) for accurate cross-transcript joins and pattern detection.</p>
+                </div>
+            </div>
+
+            {/* Capabilities */}
+            <div className="glass rounded-xl p-5 sm:p-6">
+                <h3 className="font-bold text-lg mb-2">Key Analysis Capabilities</h3>
+                <p className="text-sm text-slate-400 mb-5">Each maps to 17-section prompt requirements</p>
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                    {[{t:'Train-4 Pattern Detection',d:'Repeat trains across days/weeks. E.g., M531 daily holdouts → UP interchange disconnect. CSXT 1234 repeat failures.',s:'§6'},
+                      {t:'Terminal Recurring Issues',d:'Which terminals have repeat problems, what days, pattern/causality. Location-specific capacity rules.',s:'§4'},
+                      {t:'Constraint Classification',d:'Physical vs Procedural with solutions, indicators, thresholds — 3-stage refinement to context framework.',s:'§14'},
+                      {t:'Crew & Locomotive Analysis',d:'Re-crews, OT, mark-offs, safety. Cause-effect: loco failures → crew overtime. Reciprocal power tracking.',s:'§8,§9'},
+                      {t:'Context-Sensitive Framework',d:'3-stage: SOPs → Constraints → Framework. Builds JSON rules per location/lane/day/hour. Feeds RTOP.',s:'§13-15'},
+                      {t:'Weather Correlation',d:'Storm → circuit failures → velocity dip. Lightning → false occupancy. Temperature → switch failures.',s:'§7'},
+                      {t:'Proactive Push Alerts',d:'Volume surges, constraint triggers, pattern matches. No user action needed — system tells you.',s:'New'},
+                      {t:'Chatbot Q&A Interface',d:'Natural language queries against all stored data. "What happened with IO25 last 6 months?"',s:'New'},
+                      {t:'SOP Approve/Reject Workflow',d:'AI generates SOPs → operators review → approve, reject, edit. Refined continuously.',s:'§13'}
+                    ].map((cap,i)=>(
+                        <div key={i} className="gl rounded-lg p-4">
+                            <div className="flex items-center justify-between mb-2">
+                                <h4 className="font-semibold text-sm text-cyan-400">{cap.t}</h4>
+                                <span className="mono text-[10px] text-slate-500 bg-white/5 px-2 py-0.5 rounded flex-shrink-0 ml-2">{cap.s}</span>
+                            </div>
+                            <p className="text-xs text-slate-400">{cap.d}</p>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+/* ─── ARCHITECTURE ─── */
+function Architecture(){
+    return (
+        <div className="space-y-8 anim">
+            <div className="text-center mb-4">
+                <div className="inline-block px-4 py-1.5 bg-blue-500/10 border border-blue-500/20 rounded-full text-sm text-blue-400 font-medium mb-4">Technical Architecture</div>
+                <h2 className="text-2xl sm:text-3xl font-bold">Azure Cloud Architecture</h2>
+                <p className="text-slate-400 mt-2">Relational + Vector + Graph — with API endpoint for RTOP/SOP integration</p>
+            </div>
+            <div className="glass rounded-2xl p-5 sm:p-8" style={{boxShadow:'0 0 30px rgba(0,180,216,0.15)'}}>
+                <h3 className="font-bold text-lg mb-6 text-center">End-to-End Data Flow</h3>
+                <div className="hidden md:grid grid-cols-7 gap-3 items-start">
+                    <div className="space-y-3">
+                        <div className="accent-grad text-white text-center py-2 rounded-lg font-semibold text-xs">1. SOURCE</div>
+                        <div className="gl rounded-lg p-3 text-center"><div className="text-2xl mb-1">📞</div><p className="font-semibold text-xs">MS Teams</p><p className="text-[10px] text-slate-500">0600 / 1545 / Midnight</p></div>
+                        <div className="gl rounded-lg p-3 text-center"><div className="text-2xl mb-1">📝</div><p className="font-semibold text-xs">Transcripts</p><p className="text-[10px] text-slate-500">.docx w/ speakers</p></div>
+                    </div>
+                    <div className="flex items-center justify-center text-cyan-500 font-bold text-2xl pt-10">→</div>
+                    <div className="space-y-3">
+                        <div className="accent-grad text-white text-center py-2 rounded-lg font-semibold text-xs">2. INGEST</div>
+                        <div className="gl rounded-lg p-3 text-center border border-blue-500/20"><div className="text-2xl mb-1">⚡</div><p className="font-semibold text-xs">Power Automate</p><p className="text-[10px] text-slate-500">File trigger</p></div>
+                        <div className="gl rounded-lg p-3 text-center border border-blue-500/20"><div className="text-2xl mb-1">🗂️</div><p className="font-semibold text-xs">Blob Storage</p><p className="text-[10px] text-slate-500">Raw transcripts</p></div>
+                    </div>
+                    <div className="flex items-center justify-center text-cyan-500 font-bold text-2xl pt-10">→</div>
+                    <div className="space-y-3">
+                        <div className="bg-gradient-to-r from-purple-600 to-blue-600 text-white text-center py-2 rounded-lg font-semibold text-xs">3. AI ENGINE</div>
+                        <div className="gl rounded-lg p-3 text-center border border-purple-500/30 pulse-b"><div className="text-2xl mb-1">🧠</div><p className="font-semibold text-xs">Azure OpenAI</p><p className="text-[10px] text-slate-500">GPT-4o</p><p className="text-[10px] text-cyan-400">17-Section + 3-Stage</p></div>
+                        <div className="gl rounded-lg p-3 text-center border border-purple-500/20"><div className="text-2xl mb-1">⚙️</div><p className="font-semibold text-xs">Azure Functions</p><p className="text-[10px] text-slate-500">Orchestration</p></div>
+                    </div>
+                    <div className="flex items-center justify-center text-cyan-500 font-bold text-2xl pt-10">→</div>
+                    <div className="space-y-3">
+                        <div className="bg-gradient-to-r from-green-600 to-teal-600 text-white text-center py-2 rounded-lg font-semibold text-xs">4. DATA & UI</div>
+                        <div className="gl rounded-lg p-3 text-center border border-green-500/20"><div className="text-2xl mb-1">🗄️</div><p className="font-semibold text-xs">Relational DB</p><p className="text-[10px] text-slate-500">Structured entities</p></div>
+                        <div className="gl rounded-lg p-3 text-center border border-green-500/20"><div className="text-2xl mb-1">🔎</div><p className="font-semibold text-xs">Vector DB</p><p className="text-[10px] text-slate-500">Similarity search</p></div>
+                        <div className="gl rounded-lg p-3 text-center border border-green-500/20"><div className="text-2xl mb-1">🕸️</div><p className="font-semibold text-xs">Graph DB</p><p className="text-[10px] text-slate-500">Connects everything</p></div>
+                        <div className="gl rounded-lg p-3 text-center border border-green-500/20"><div className="text-2xl mb-1">📊</div><p className="font-semibold text-xs">Web App + API</p><p className="text-[10px] text-slate-500">Dashboards & Endpoint</p></div>
+                    </div>
+                </div>
+                {/* Mobile */}
+                <div className="md:hidden space-y-4">
+                    {[{step:'1. SOURCE',c:'accent-grad',items:[{icon:'📞',t:'MS Teams',d:'0600/1545/Midnight'},{icon:'📝',t:'Transcripts',d:'.docx w/ speakers'}]},
+                      {step:'2. INGEST',c:'accent-grad',items:[{icon:'⚡',t:'Power Automate',d:'File trigger'},{icon:'🗂️',t:'Blob Storage',d:'Raw transcripts'}]},
+                      {step:'3. AI ENGINE',c:'bg-gradient-to-r from-purple-600 to-blue-600',items:[{icon:'🧠',t:'Azure OpenAI',d:'17-Section + 3-Stage Refinement'},{icon:'⚙️',t:'Azure Functions',d:'Orchestration'}]},
+                      {step:'4. DATA & UI',c:'bg-gradient-to-r from-green-600 to-teal-600',items:[{icon:'🗄️',t:'Relational DB',d:'Structured entities'},{icon:'🔎',t:'Vector DB',d:'Similarity search'},{icon:'🕸️',t:'Graph DB',d:'Connections'},{icon:'📊',t:'Web App + API',d:'Dashboard & endpoint'}]}
+                    ].map((s,si)=>(
+                        <div key={si}>
+                            <div className={`${s.c} text-white text-center py-2 rounded-lg font-semibold text-sm mb-2`}>{s.step}</div>
+                            <div className="grid grid-cols-2 gap-2">{s.items.map((it,ii)=>(<div key={ii} className="gl rounded-lg p-3 text-center"><div className="text-xl mb-1">{it.icon}</div><p className="font-semibold text-xs">{it.t}</p><p className="text-[10px] text-slate-500">{it.d}</p></div>))}</div>
+                            {si<3&&<div className="text-center text-cyan-500 font-bold text-xl py-1">↓</div>}
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            {/* Triple DB Architecture */}
+            <div className="glass rounded-xl p-5 sm:p-6">
+                <h3 className="font-bold text-lg mb-4">🗄️ Triple Database Architecture</h3>
+                <p className="text-sm text-slate-400 mb-4">Different data types require different storage strategies. The chatbot queries all three and compiles responses in under 6 seconds.</p>
+                <div className="grid sm:grid-cols-3 gap-4">
+                    <div className="gl rounded-xl p-4 border-t-2 border-cyan-500">
+                        <h4 className="font-bold text-sm text-cyan-400 mb-2">Relational DB</h4>
+                        <p className="text-xs text-slate-400 mb-2">Structured entities with well-designed tables</p>
+                        <div className="space-y-1">{['Train table (Train-4/6/10, origin, dest)','Terminal table (status, capacity, issues)','Crew table (mark-offs, re-crews, OT)','Constraint table (type, solution, indicator)','SOP table (with approve/reject status)'].map((r,i)=>(<p key={i} className="text-[10px] text-slate-300">→ {r}</p>))}</div>
+                    </div>
+                    <div className="gl rounded-xl p-4 border-t-2 border-purple-500">
+                        <h4 className="font-bold text-sm text-purple-400 mb-2">Vector DB</h4>
+                        <p className="text-xs text-slate-400 mb-2">Similarity search on unstructured content</p>
+                        <div className="space-y-1">{['Full transcript embeddings','Contextual framework embeddings','Cross-transcript semantic queries','Pattern matching across time','Natural language search'].map((r,i)=>(<p key={i} className="text-[10px] text-slate-300">→ {r}</p>))}</div>
+                    </div>
+                    <div className="gl rounded-xl p-4 border-t-2 border-green-500">
+                        <h4 className="font-bold text-sm text-green-400 mb-2">Graph DB</h4>
+                        <p className="text-xs text-slate-400 mb-2">Connects everything — relationships & causality</p>
+                        <div className="space-y-1">{['Train → Terminal → Customer chains','Engine → Train pair reciprocal power','Cascade: switch failure → 4 trains delayed','Interchange: CSX ↔ UP slot dependencies','Location → weather → impact correlation'].map((r,i)=>(<p key={i} className="text-[10px] text-slate-300">→ {r}</p>))}</div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Services Table */}
+            <div className="glass rounded-xl p-5 sm:p-6 overflow-x-auto">
+                <h3 className="font-bold text-lg mb-4">Azure Service Inventory</h3>
+                <table className="w-full text-sm resp-table"><thead><tr className="border-b border-white/10">
+                    <th className="px-4 py-3 text-left font-semibold text-cyan-400 text-xs">Service</th>
+                    <th className="px-4 py-3 text-left font-semibold text-cyan-400 text-xs">Role</th>
+                    <th className="px-4 py-3 text-left font-semibold text-cyan-400 text-xs">Details</th>
+                </tr></thead><tbody className="divide-y divide-white/5">
+                    {[['Microsoft Teams','Source','0600 / 1545 / Midnight calls with auto-transcription & speaker diarization'],
+                      ['Power Automate','Trigger','File trigger on new transcript upload'],
+                      ['Azure Blob Storage','Raw Storage','Immutable transcript storage — critical: rolling 1yr retention'],
+                      ['Azure OpenAI (GPT-4o)','LLM Engine','17-section prompt + 3-stage context refinement'],
+                      ['Azure Functions','Orchestration','Chunking, batching, prompt execution, DB writes'],
+                      ['Relational DB (Cosmos/SQL)','Structured Store','Train, terminal, crew, constraint, SOP entities'],
+                      ['Azure AI Search','Vector Store','Embeddings for cross-transcript semantic search'],
+                      ['Graph DB (Gremlin/Neo4j)','Relationship Store','Connections, causality, cascade analysis'],
+                      ['Python Web App','Portal','Dashboards, alerts, Q&A chatbot, SOP management'],
+                      ['API Endpoint','Integration','REST API for RTOP and SOP system consumption'],
+                      ['Azure AD / Entra ID','Identity','SSO, RBAC for operational data']
+                    ].map(([s,r,d],i)=>(
+                        <tr key={i} className="hover:bg-white/[0.02]">
+                            <td className="px-4 py-3 font-semibold text-sm" data-label="Service">{s}</td>
+                            <td className="px-4 py-3 text-xs text-slate-400" data-label="Role">{r}</td>
+                            <td className="px-4 py-3 text-xs text-slate-400" data-label="Details">{d}</td>
+                        </tr>
+                    ))}
+                </tbody></table>
+            </div>
+        </div>
+    );
+}
+
+/* ─── 17 SECTIONS ─── */
+function Output(){
+    return (
+        <div className="space-y-8 anim">
+            <div className="text-center mb-4">
+                <div className="inline-block px-4 py-1.5 bg-purple-500/10 border border-purple-500/20 rounded-full text-sm text-purple-400 font-medium mb-4">Analysis Output</div>
+                <h2 className="text-2xl sm:text-3xl font-bold">17-Section Structured Analysis</h2>
+                <p className="text-slate-400 mt-2">Every transcript generates comprehensive intelligence — daily and range</p>
+            </div>
+            <div className="flex flex-wrap justify-center gap-2 mb-2">
+                {Object.entries(CC).map(([k,v])=>(<span key={k} className={`px-3 py-1 rounded-full text-[10px] sm:text-xs font-medium ${v.bg} ${v.tx} border ${v.bo}`}>{v.lb}</span>))}
+            </div>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {SECS.map(s=>{const c=CC[s.cat];return(
+                    <div key={s.n} className={`gl rounded-lg p-4 border ${c.bo} hover:bg-white/[0.04] transition-colors`}>
+                        <div className="flex items-start gap-3">
+                            <span className={`w-8 h-8 ${c.bg} ${c.tx} rounded-lg flex items-center justify-center font-bold text-sm mono flex-shrink-0`}>{s.n}</span>
+                            <div className="min-w-0"><h4 className="font-semibold text-sm">{s.t}</h4><p className="text-[11px] text-slate-500 mt-1">{s.d}</p></div>
+                        </div>
+                    </div>
+                );})}
+            </div>
+            <div className="glass rounded-xl p-5 sm:p-6 border border-cyan-500/20">
+                <h3 className="font-bold text-lg mb-4">◈ Example: §14 — Constraint Classification</h3>
+                <div className="gl rounded-lg p-4 sm:p-5 mono text-xs sm:text-sm space-y-1 overflow-x-auto">
+                    <p className="font-bold text-cyan-400">Nashville/Radnor: N Radnor Crossover Switch Failure</p>
+                    <p className="text-slate-400">• <span className="text-slate-200 font-semibold">Type:</span> Physical</p>
+                    <p className="text-slate-400">• <span className="text-slate-200 font-semibold">Constraint:</span> Crossover switch frozen, would not lock — 2.5hr cascade</p>
+                    <p className="text-slate-400">• <span className="text-slate-200 font-semibold">Cause:</span> Sub-zero temps, wind, no preemptive maintainer</p>
+                    <p className="text-slate-400">• <span className="text-slate-200 font-semibold">Solution:</span> Station maintainer during cold events (per Longcoy)</p>
+                    <p className="text-slate-400">• <span className="text-slate-200 font-semibold">Indicators:</span> Forecast {"<"}20°F + wind in Nashville</p>
+                    <p className="text-slate-400">• <span className="text-slate-200 font-semibold">Impact:</span> M58527 recrew, X50228 delayed, M53326 delayed</p>
+                </div>
+            </div>
+            <div className="glass rounded-xl p-5 sm:p-6 border border-amber-500/20">
+                <h3 className="font-bold text-lg mb-3">🔄 Evolving Sections Over Time</h3>
+                <p className="text-sm text-slate-400">Sections are not fixed. As the model processes more calls, it may surface new patterns we haven't captured. Ben's approach: feed transcripts + current output back into LLM and ask "What am I not asking for? What am I missing?" — then add new sections as needed.</p>
+            </div>
+        </div>
+    );
+}
+
+/* ─── NEW: CONTEXT-SENSITIVE FRAMEWORK ─── */
+function ContextFramework(){
+    return (
+        <div className="space-y-8 anim">
+            <div className="text-center mb-4">
+                <div className="inline-block px-4 py-1.5 bg-orange-500/10 border border-orange-500/20 rounded-full text-sm text-orange-400 font-medium mb-4">Core Deliverable</div>
+                <h2 className="text-2xl sm:text-3xl font-bold">Context-Sensitive Rules Framework</h2>
+                <p className="text-slate-400 mt-2 max-w-2xl mx-auto">The 3-stage refinement that transforms call intelligence into actionable rules per location, lane, day, and hour</p>
+            </div>
+
+            {/* 3-Stage Refinement */}
+            <div className="glass rounded-xl p-5 sm:p-6">
+                <h3 className="font-bold text-lg mb-5">🔄 3-Stage Refinement Pipeline</h3>
+                <div className="grid md:grid-cols-3 gap-4">
+                    <div className="gl rounded-xl p-5 border-t-2 border-cyan-500">
+                        <div className="flex items-center gap-2 mb-3">
+                            <span className="mono text-xs font-bold px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-400">Stage 1</span>
+                        </div>
+                        <h4 className="font-bold text-sm mb-2">SOPs & Lessons Learned</h4>
+                        <p className="text-xs text-slate-400 mb-3">Extract leadership insights → step-by-step procedures</p>
+                        <div className="bg-slate-900/50 rounded-lg p-3 mono text-[10px] text-slate-300 space-y-1">
+                            <p className="text-cyan-400 font-bold">Nashville Cold Weather SOP:</p>
+                            <p>1. Monitor forecast {"<"}20°F</p>
+                            <p>2. Pre-position maintainer 2hr before</p>
+                            <p>3. Confirm switch operation q30min</p>
+                            <p>4. Escalate if fails to lock</p>
+                        </div>
+                    </div>
+                    <div className="gl rounded-xl p-5 border-t-2 border-blue-500 relative">
+                        <div className="hidden md:block absolute top-1/2 -left-3 text-cyan-500 font-bold text-xl">→</div>
+                        <div className="flex items-center gap-2 mb-3">
+                            <span className="mono text-xs font-bold px-2 py-0.5 rounded bg-blue-500/20 text-blue-400">Stage 2</span>
+                        </div>
+                        <h4 className="font-bold text-sm mb-2">Constraint Classification</h4>
+                        <p className="text-xs text-slate-400 mb-3">Physical & procedural constraints with solutions and triggers</p>
+                        <div className="bg-slate-900/50 rounded-lg p-3 mono text-[10px] text-slate-300 space-y-1">
+                            <p className="text-blue-400 font-bold">Physical: N Radnor Switch</p>
+                            <p>Trigger: Temp {"<"}20°F + wind</p>
+                            <p>Impact: 2.5hr cascade, 4 trains</p>
+                            <p className="text-blue-400 font-bold mt-2">Procedural: Crew Standby</p>
+                            <p>Trigger: Train {"<"}30min to outlaw</p>
+                            <p>Impact: Blocking risk, ITD</p>
+                        </div>
+                    </div>
+                    <div className="gl rounded-xl p-5 border-t-2 border-green-500 relative">
+                        <div className="hidden md:block absolute top-1/2 -left-3 text-cyan-500 font-bold text-xl">→</div>
+                        <div className="flex items-center gap-2 mb-3">
+                            <span className="mono text-xs font-bold px-2 py-0.5 rounded bg-green-500/20 text-green-400">Stage 3</span>
+                        </div>
+                        <h4 className="font-bold text-sm mb-2">Context-Sensitive Framework</h4>
+                        <p className="text-xs text-slate-400 mb-3">Refined rules per location/lane/day/hour — feeds RTOP</p>
+                        <div className="bg-slate-900/50 rounded-lg p-3 mono text-[10px] text-slate-300 space-y-1">
+                            <p className="text-green-400 font-bold">Selkirk Rules (JSON):</p>
+                            <p>{"{"} location: "Selkirk",</p>
+                            <p>  spacing_east: "90min Tue-Fri",</p>
+                            <p>  spacing_west: "2hr weekends",</p>
+                            <p>  max_inbound_2hr: 5,</p>
+                            <p>  merchandise_priority: "Sun low",</p>
+                            <p>  intermodal_priority: "always high"</p>
+                            <p>{"}"}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Rule Hierarchy */}
+            <div className="glass rounded-xl p-5 sm:p-6">
+                <h3 className="font-bold text-lg mb-4">📐 Rule Hierarchy — Global to Minute</h3>
+                <p className="text-sm text-slate-400 mb-5">Rules cascade from global defaults down to time-specific overrides. Each level adds specificity.</p>
+                <div className="space-y-2">
+                    {[{lvl:'GLOBAL',desc:'Train taxonomy (intermodal > merchandise > bulk), default priorities, safety rules',c:'bg-cyan-500',w:'w-full'},
+                      {lvl:'LANE',desc:'Between-points rules — e.g., NY to Jacksonville corridor spacing, interchange handoff timing',c:'bg-blue-500',w:'w-[90%]'},
+                      {lvl:'LOCATION',desc:'Terminal-specific capacity, processing limits, known bottlenecks — e.g., Selkirk max 5 inbound/2hr',c:'bg-purple-500',w:'w-[75%]'},
+                      {lvl:'DAY',desc:'Day-of-week patterns — Tuesday spacing ≠ Saturday spacing. Weekend merchandise deprioritized.',c:'bg-green-500',w:'w-[60%]'},
+                      {lvl:'HOUR',desc:'Time-sensitive decisions — crew shift changes, peak volume windows, maintenance windows',c:'bg-orange-500',w:'w-[45%]'}
+                    ].map((r,i)=>(
+                        <div key={i} className={`${r.w} gl rounded-lg p-3 flex items-center gap-3`}>
+                            <span className={`${r.c} text-white text-[10px] font-bold px-2 py-1 rounded mono flex-shrink-0 w-20 text-center`}>{r.lvl}</span>
+                            <p className="text-xs text-slate-300">{r.desc}</p>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            {/* Human-in-the-Loop */}
+            <div className="glass rounded-xl p-5 sm:p-6">
+                <h3 className="font-bold text-lg mb-4">👤 Human-in-the-Loop Validation</h3>
+                <p className="text-sm text-slate-400 mb-4">AI generates rules and SOPs. Operators validate. The system gets smarter with every cycle.</p>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {[{s:'1',t:'AI Generates',d:'LLM creates SOP/rule from transcript analysis',c:'cyan'},
+                      {s:'2',t:'Operator Reviews',d:'Terminal manager sees the output against real lineups',c:'blue'},
+                      {s:'3',t:'Approve / Reject / Edit',d:'"Add 2 more steps" or "This is garbage, delete"',c:'purple'},
+                      {s:'4',t:'Rules Updated',d:'JSON framework refined, re-run, iterate until trusted',c:'green'}
+                    ].map((step,i)=>(
+                        <div key={i} className="gl rounded-lg p-4 text-center">
+                            <div className={`w-8 h-8 mx-auto mb-2 rounded-full flex items-center justify-center font-bold text-sm ${step.c==='cyan'?'bg-cyan-500/20 text-cyan-400':step.c==='blue'?'bg-blue-500/20 text-blue-400':step.c==='purple'?'bg-purple-500/20 text-purple-400':'bg-green-500/20 text-green-400'}`}>{step.s}</div>
+                            <h4 className="font-bold text-xs mb-1">{step.t}</h4>
+                            <p className="text-[10px] text-slate-400">{step.d}</p>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+/* ─── DASHBOARD ─── */
+function Dashboard(){
+    return (
+        <div className="space-y-6 anim">
+            <div className="text-center mb-4">
+                <div className="inline-block px-4 py-1.5 bg-green-500/10 border border-green-500/20 rounded-full text-sm text-green-400 font-medium mb-4">Frontend Mockup</div>
+                <h2 className="text-2xl sm:text-3xl font-bold">Operations Command Center</h2>
+                <p className="text-slate-400 mt-2">Web App → Relational DB + Vector DB + Graph DB → API Endpoint</p>
+            </div>
+            <div className="bg-[#0A0F1C] rounded-2xl p-4 sm:p-5 border border-white/10 shadow-2xl">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-5 pb-4 border-b border-white/5 gap-3">
+                    <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 sm:w-10 sm:h-10 accent-grad rounded-xl flex items-center justify-center font-bold mono text-xs sm:text-sm flex-shrink-0">ROI</div>
+                        <div><h3 className="font-semibold text-sm">Railroad Operations Intelligence</h3><p className="text-[10px] sm:text-[11px] text-slate-500">{D.date} • 0600 Net Ops • {D.dur}</p></div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2"><span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span><span className="text-green-400 text-xs font-medium">17 Sections</span></div>
+                        <div className="flex items-center gap-2"><span className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></span><span className="text-orange-400 text-xs font-medium">3 Proactive Alerts</span></div>
+                    </div>
+                </div>
+
+                {/* Proactive Alert Banner */}
+                <div className="mb-4 p-3 bg-orange-500/10 border border-orange-500/30 rounded-lg">
+                    <p className="text-xs font-bold text-orange-400 mb-1">🔔 PROACTIVE ALERT</p>
+                    <p className="text-xs text-slate-300">Selkirk has 5 trains inbound within next 90 minutes — exceeds historical processing capacity (max 3/90min). Consider spacing adjustment. Last similar event (Nov 14): 4hr cascade, 2 crew outlaws.</p>
+                </div>
+
+                {/* KPI Row */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3 mb-5">
+                    {[{l:'E2E Velocity',v:'20.21',d:'↑ 1.81 vs prev',c:'text-green-400'},
+                      {l:'STB Velocity',v:'26.2',d:'↑ 1.4 vs prev',c:'text-green-400'},
+                      {l:'Active Trains',v:'198',d:'57 late (29%)',c:'text-orange-400'},
+                      {l:'Crew Holding',v:'13',d:'7 Home / 6 Away',c:'text-yellow-400'},
+                      {l:'Active Headcount',v:'7,181',d:'↑8 • Sick ↓246',c:'text-green-400'}
+                    ].map((kpi,i)=>(
+                        <div key={i} className="bg-[#111827] rounded-xl p-3 text-center border border-white/5">
+                            <p className="text-[10px] text-slate-500 uppercase mb-1">{kpi.l}</p>
+                            <p className={`text-lg sm:text-xl font-bold mono ${kpi.c}`}>{kpi.v}</p>
+                            <p className={`text-[10px] ${kpi.c}`}>{kpi.d}</p>
+                        </div>
+                    ))}
+                </div>
+
+                {/* 3-Column */}
+                <div className="grid lg:grid-cols-3 gap-3 sm:gap-4 mb-4">
+                    {/* Terminal Status */}
+                    <div className="bg-[#111827] rounded-xl p-4 border border-white/5">
+                        <h4 className="font-semibold text-sm mb-3 flex items-center gap-2"><span className="w-2 h-2 bg-cyan-400 rounded-full"></span>Terminal Status</h4>
+                        <div className="space-y-2">
+                            {D.terminals.slice(0,5).map((t,i)=>(
+                                <div key={i} className={`rounded-lg p-2.5 flex items-center justify-between ${t.st==='critical'?'bg-red-500/10 border border-red-500/20':'bg-yellow-500/5 border border-yellow-500/10'}`}>
+                                    <span className="text-xs font-medium">{t.n}</span>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-[10px] text-slate-500">{t.i} issues</span>
+                                        <span className={`w-2 h-2 rounded-full ${sc(t.st)}`}></span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Issue Themes */}
+                    <div className="bg-[#111827] rounded-xl p-4 border border-white/5">
+                        <h4 className="font-semibold text-sm mb-3 flex items-center gap-2"><span className="w-2 h-2 bg-cyan-400 rounded-full"></span>Issue Themes</h4>
+                        <div className="space-y-2">
+                            {D.themes.slice(0,5).map((t,i)=>(
+                                <div key={i} className="flex items-center gap-2">
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex justify-between text-[11px] mb-1"><span className="truncate">{t.t}</span><span className="mono font-bold text-cyan-400 flex-shrink-0">{t.c}</span></div>
+                                        <div className="w-full bg-white/5 rounded-full h-1.5"><div className="h-1.5 rounded-full bg-gradient-to-r from-cyan-500 to-blue-500" style={{width:`${(t.c/28)*100}%`}}></div></div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Problem Trains */}
+                    <div className="bg-[#111827] rounded-xl p-4 border border-white/5">
+                        <h4 className="font-semibold text-sm mb-3 flex items-center gap-2"><span className="w-2 h-2 bg-cyan-400 rounded-full"></span>Problem Trains (Train-4)</h4>
+                        <div className="space-y-2">
+                            {D.pTrains.slice(0,5).map((t,i)=>(
+                                <div key={i} className="flex items-center justify-between bg-white/[0.02] rounded-lg px-3 py-2">
+                                    <div><span className="mono font-bold text-sm text-blue-400">{t.t4}</span><span className="text-[10px] text-slate-500 ml-2">{t.term}</span></div>
+                                    <span className={`text-[9px] font-bold px-2 py-0.5 rounded ${ic(t.imp)}`}>{t.imp}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Constraints Row */}
+                <div className="bg-[#111827] rounded-xl p-4 border border-white/5">
+                    <h4 className="font-semibold text-sm mb-3 flex items-center gap-2"><span className="w-2 h-2 bg-cyan-400 rounded-full"></span>Active Constraints (TOC Framework)</h4>
+                    <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-2">
+                        {D.constraints.slice(0,4).map((c,i)=>(
+                            <div key={i} className={`rounded-lg p-3 ${c.ty==='Physical'?'bg-blue-500/5 border border-blue-500/10':'bg-purple-500/5 border border-purple-500/10'}`}>
+                                <div className="flex items-center gap-2 mb-1">
+                                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${c.ty==='Physical'?'bg-blue-500/20 text-blue-400':'bg-purple-500/20 text-purple-400'}`}>{c.ty}</span>
+                                    <span className="text-[10px] text-slate-500">{c.loc}</span>
+                                </div>
+                                <p className="text-xs font-medium">{c.n}</p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Chatbot Preview */}
+                <div className="mt-4 bg-[#111827] rounded-xl p-4 border border-white/5">
+                    <h4 className="font-semibold text-sm mb-3 flex items-center gap-2"><span className="w-2 h-2 bg-green-400 rounded-full"></span>💬 Conversational Q&A</h4>
+                    <div className="space-y-2">
+                        <div className="bg-cyan-500/5 border border-cyan-500/10 rounded-lg p-3">
+                            <p className="text-[10px] text-cyan-400 font-bold mb-1">User asks:</p>
+                            <p className="text-xs text-slate-300 italic">"Give me the problems for IO25 from the past two years"</p>
+                        </div>
+                        <div className="bg-white/[0.02] border border-white/5 rounded-lg p-3">
+                            <p className="text-[10px] text-green-400 font-bold mb-1">System responds ({"<"}6 sec):</p>
+                            <p className="text-xs text-slate-300">Queries relational DB (train incidents), vector DB (semantic context), and graph DB (connected impacts). Returns: 14 incidents, top issues: broken rail delays (5), crew standby failures (3), interchange timing (3), weather delays (3). Worst month: January 2026.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+/* ─── TRANSCRIPT ANALYSIS ─── */
+function Transcript(){
+    const [xc,setXc]=useState(-1);
+    return (
+        <div className="space-y-8 anim">
+            <div className="text-center mb-4">
+                <div className="inline-block px-4 py-1.5 bg-orange-500/10 border border-orange-500/20 rounded-full text-sm text-orange-400 font-medium mb-4">Live Extraction</div>
+                <h2 className="text-2xl sm:text-3xl font-bold">Transcript Analysis — Jan 27, 2026</h2>
+                <p className="text-slate-400 mt-2">AI-extracted from a single 2h 33m 0600 Net Ops Call</p>
+            </div>
+
+            {/* Themes */}
+            <div className="grid lg:grid-cols-2 gap-4 sm:gap-5">
+                <div className="glass rounded-xl p-5 sm:p-6">
+                    <h3 className="font-bold text-lg mb-4">§2 — Operational Theme Counts</h3>
+                    <div className="space-y-2">
+                        {D.themes.map((t,i)=>(
+                            <div key={i} className="flex items-center gap-3">
+                                <span className={`w-2 h-2 rounded-full flex-shrink-0 ${sev(t.s)}`}></span>
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex justify-between text-sm mb-1"><span>{t.t}</span><span className="mono font-bold text-cyan-400">{t.c}</span></div>
+                                    <div className="w-full bg-white/5 rounded-full h-1.5"><div className="h-1.5 rounded-full bg-gradient-to-r from-cyan-500 to-blue-500" style={{width:`${(t.c/28)*100}%`}}></div></div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                <div className="glass rounded-xl p-5 sm:p-6">
+                    <h3 className="font-bold text-lg mb-4">§4 — Terminal Status</h3>
+                    <div className="space-y-2">
+                        {D.terminals.map((t,i)=>(
+                            <div key={i} className="gl rounded-lg p-3 flex items-center justify-between">
+                                <div className="flex items-center gap-2"><span className={`w-2 h-2 rounded-full ${sc(t.st)}`}></span><span className="font-medium text-sm">{t.n}</span></div>
+                                <div className="flex items-center gap-2"><span className="text-xs text-slate-500">{t.i} issues</span><span className={`text-[10px] font-medium uppercase ${stx(t.st)}`}>{t.st}</span></div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+
+            {/* Problem Trains */}
+            <div className="glass rounded-xl p-5 sm:p-6 overflow-x-auto">
+                <h3 className="font-bold text-lg mb-4">§6 — Problem Trains (Train-4)</h3>
+                <table className="w-full text-sm resp-table"><thead><tr className="border-b border-white/10">
+                    <th className="px-3 py-2 text-left text-xs text-cyan-400 font-semibold">Train-4</th>
+                    <th className="px-3 py-2 text-left text-xs text-cyan-400 font-semibold">Train-6</th>
+                    <th className="px-3 py-2 text-left text-xs text-cyan-400 font-semibold">Terminal</th>
+                    <th className="px-3 py-2 text-left text-xs text-cyan-400 font-semibold">Key Issues</th>
+                    <th className="px-3 py-2 text-left text-xs text-cyan-400 font-semibold">Impact</th>
+                </tr></thead><tbody className="divide-y divide-white/5">
+                    {D.pTrains.map((t,i)=>(
+                        <tr key={i} className="hover:bg-white/[0.02]">
+                            <td className="px-3 py-2 mono font-bold text-blue-400" data-label="Train-4">{t.t4}</td>
+                            <td className="px-3 py-2 mono text-xs text-slate-400" data-label="Train-6">{t.t6}</td>
+                            <td className="px-3 py-2 text-xs" data-label="Terminal">{t.term}</td>
+                            <td className="px-3 py-2 text-xs text-slate-400" data-label="Issues">{t.iss.join(' • ')}</td>
+                            <td className="px-3 py-2" data-label="Impact"><span className={`text-[10px] font-bold px-2 py-0.5 rounded ${ic(t.imp)}`}>{t.imp}</span></td>
+                        </tr>
+                    ))}
+                </tbody></table>
+            </div>
+
+            {/* Constraints */}
+            <div className="glass rounded-xl p-5 sm:p-6">
+                <h3 className="font-bold text-lg mb-4">§14 — Constraints (click to expand)</h3>
+                <div className="space-y-2">
+                    {D.constraints.map((c,i)=>(
+                        <div key={i} className={`gl rounded-lg p-3 cursor-pointer transition-colors hover:bg-white/[0.06] ${c.ty==='Physical'?'border-l-2 border-blue-500':'border-l-2 border-purple-500'}`} onClick={()=>setXc(xc===i?-1:i)}>
+                            <div className="flex items-center gap-2 flex-wrap">
+                                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${c.ty==='Physical'?'bg-blue-500/20 text-blue-400':'bg-purple-500/20 text-purple-400'}`}>{c.ty}</span>
+                                <span className="font-semibold text-sm flex-1 min-w-0">{c.n}</span>
+                                <span className="text-[10px] text-slate-500 flex-shrink-0">📍 {c.loc}</span>
+                            </div>
+                            {xc===i&&(
+                                <div className="mt-3 pt-3 border-t border-white/5 grid sm:grid-cols-3 gap-3 text-xs">
+                                    <div><p className="text-slate-500 text-[10px] uppercase mb-1">Root Cause</p><p className="text-slate-300">{c.ca}</p></div>
+                                    <div><p className="text-slate-500 text-[10px] uppercase mb-1">Solution</p><p className="text-green-400">{c.sol}</p></div>
+                                    <div><p className="text-slate-500 text-[10px] uppercase mb-1">Indicators</p><p className="text-amber-400">{c.ind}</p></div>
+                                </div>
+                            )}
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            {/* Lessons */}
+            <div className="glass rounded-xl p-5 sm:p-6">
+                <h3 className="font-bold text-lg mb-4">§13 — Lessons Learned & SOPs</h3>
+                <div className="space-y-4">
+                    {D.lessons.map((l,i)=>(
+                        <div key={i} className="gl rounded-xl p-4 sm:p-5 border border-green-500/20">
+                            <p className="font-semibold text-sm text-red-400 mb-2">Issue: {l.issue}</p>
+                            <p className="text-xs text-cyan-300 mb-3 italic">"{l.insight}"</p>
+                            <div className="bg-slate-900/50 rounded-lg p-3">
+                                <div className="flex items-center justify-between mb-2">
+                                    <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Standard Operating Procedure</p>
+                                    <div className="flex gap-1">
+                                        <span className="text-[9px] px-2 py-0.5 bg-green-500/20 text-green-400 rounded cursor-pointer">✓ Approve</span>
+                                        <span className="text-[9px] px-2 py-0.5 bg-red-500/20 text-red-400 rounded cursor-pointer">✕ Reject</span>
+                                        <span className="text-[9px] px-2 py-0.5 bg-blue-500/20 text-blue-400 rounded cursor-pointer">✎ Edit</span>
+                                    </div>
+                                </div>
+                                {l.sop.split('\n').map((step,j)=>(<p key={j} className="text-xs text-slate-300 mb-1">{step}</p>))}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+/* ─── ROADMAP ─── */
+function Roadmap(){
+    return (
+        <div className="space-y-8 anim">
+            <div className="text-center mb-4">
+                <div className="inline-block px-4 py-1.5 bg-purple-500/10 border border-purple-500/20 rounded-full text-sm text-purple-400 font-medium mb-4">Delivery Plan</div>
+                <h2 className="text-2xl sm:text-3xl font-bold">Phased Delivery Roadmap</h2>
+                <p className="text-slate-400 mt-2">Start with 0600 → Scale to all calls → Integrate with RTOP & SOP</p>
+            </div>
+
+            {/* Urgency Note */}
+            <div className="glass rounded-xl p-5 sm:p-6 border border-red-500/20">
+                <h3 className="font-bold text-sm text-red-400 mb-2">⏰ Data Retention Urgency</h3>
+                <p className="text-sm text-slate-300">CSX has a rolling ~1 year retention on Teams transcripts. There are currently ~1,000+ transcripts available (3 calls/day × 1 year). Data is actively being lost as older transcripts age out. Ingestion pipeline is the #1 priority.</p>
+            </div>
+
+            {/* Phases */}
+            <div className="glass rounded-xl p-5 sm:p-6">
+                <h3 className="font-bold text-lg mb-6">Delivery Phases</h3>
+                <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                    {[{p:'Phase 1',t:'Foundation — 0600 Only',tm:'Weeks 1–4',items:['Automated transcript ingestion','Azure OpenAI extraction (daily view)','Relational + Vector DB storage','Basic web portal with daily reports','Train-4/6/10 entity extraction','SOP + Constraint extraction'],s:'active',note:'FIRST BENCHMARK'},
+                      {p:'Phase 2',t:'Range Analysis + Graph',tm:'Weeks 5–8',items:['Cross-transcript range analysis','Graph DB for relationships','Train-4 repeat pattern detection','Context-sensitive framework (3-stage)','Terminal recurring issue tracking','Chatbot Q&A interface'],s:'next',note:'NETWORK INTELLIGENCE'},
+                      {p:'Phase 3',t:'Proactive Push + Scale',tm:'Weeks 9–12',items:['Proactive alert engine','Add 1545 + Midnight calls','SOP approve/reject workflow','Region/zone filtering','API endpoint for RTOP/SOP','Weather correlation engine'],s:'planned',note:'PUSH MODEL'},
+                      {p:'Phase 4',t:'Predictive + Integration',tm:'Weeks 13–16',items:['RTOP inference integration','SOP strategic planning feed','Call agenda prediction (simulate 0600)','Locomotive power pair tracking','Crew availability forecasting','JSON rules engine automation'],s:'planned',note:'FULL VISION'}
+                    ].map((ph,i)=>(
+                        <div key={i} className={`gl rounded-xl p-4 sm:p-5 border ${ph.s==='active'?'border-cyan-500/40':ph.s==='next'?'border-blue-500/20':'border-white/5'}`}>
+                            <div className="flex items-center gap-2 mb-3 flex-wrap">
+                                <span className={`mono text-xs font-bold px-2 py-0.5 rounded ${ph.s==='active'?'bg-cyan-500/20 text-cyan-400':ph.s==='next'?'bg-blue-500/20 text-blue-400':'bg-white/5 text-slate-500'}`}>{ph.p}</span>
+                                {ph.s==='active'&&<span className="text-[10px] text-cyan-400 animate-pulse">● PRIORITY</span>}
+                            </div>
+                            <h4 className="font-bold text-sm mb-1">{ph.t}</h4>
+                            <p className="text-[10px] text-slate-500 mb-1">{ph.tm}</p>
+                            <p className="text-[10px] text-amber-400 font-bold mb-3">{ph.note}</p>
+                            {ph.items.map((it,j)=>(<div key={j} className="flex items-center gap-2 text-xs text-slate-400 mb-1"><span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${ph.s==='active'?'bg-cyan-400':ph.s==='next'?'bg-blue-400':'bg-slate-600'}`}></span>{it}</div>))}
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            {/* Scale Path */}
+            <div className="glass rounded-xl p-5 sm:p-6">
+                <h3 className="font-bold text-lg mb-4">📈 Scaling Path</h3>
+                <div className="grid sm:grid-cols-3 gap-4">
+                    <div className="gl rounded-xl p-4 border-t-2 border-cyan-500">
+                        <h4 className="font-bold text-sm mb-2">Step 1: 0600 Call</h4>
+                        <p className="text-xs text-slate-400">Prove the pipeline on a single call type. Get the first benchmark delivered. Build confidence.</p>
+                    </div>
+                    <div className="gl rounded-xl p-4 border-t-2 border-blue-500">
+                        <h4 className="font-bold text-sm mb-2">Step 2: All 3 Calls</h4>
+                        <p className="text-xs text-slate-400">Add 1545 and Midnight calls. Same pipeline — just include them. Triple the data flowing in.</p>
+                    </div>
+                    <div className="gl rounded-xl p-4 border-t-2 border-green-500">
+                        <h4 className="font-bold text-sm mb-2">Step 3: Integration</h4>
+                        <p className="text-xs text-slate-400">Expose API endpoint. Connect RTOP for tactical adjustment inference. Feed SOP for strategic planning.</p>
+                    </div>
+                </div>
+            </div>
+
+            {/* What We're NOT Building */}
+            <div className="glass rounded-xl p-5 sm:p-6 border border-amber-500/20">
+                <h3 className="font-bold text-lg mb-4">⚠️ Scope Clarity — What ROI Builds vs. What Exists Elsewhere</h3>
+                <div className="grid md:grid-cols-2 gap-5">
+                    <div>
+                        <h4 className="font-bold text-sm text-green-400 mb-3">✅ ROI Builds</h4>
+                        {['Transcript ingestion & extraction pipeline','Structured storage (relational + vector + graph)','Daily + Range analysis engine','Context-sensitive framework generation','Proactive alert engine','Chatbot Q&A interface','SOP management with approve/reject','API endpoint for external consumption','Dashboard & reporting portal'].map((r,i)=>(<p key={i} className="text-xs text-slate-300 mb-1 flex gap-2"><span className="text-green-400">→</span>{r}</p>))}
+                    </div>
+                    <div>
+                        <h4 className="font-bold text-sm text-slate-500 mb-3">◻ Already Being Built by Other Teams</h4>
+                        {['RTOP tactical adjustments (annul, reroute, reschedule) — CSX/RIT teams','SOP strategic operating plan tool — existing initiative','Locomotive power planning system — being enhanced','Train state atomic changes — Jake\'s team building','Service plan templates — separate effort'].map((r,i)=>(<p key={i} className="text-xs text-slate-500 mb-1 flex gap-2"><span className="text-slate-600">→</span>{r}</p>))}
+                        <p className="text-xs text-amber-400 mt-2">ROI supplements these — doesn't replace them. We build the knowledge base and API they consume.</p>
+                    </div>
+                </div>
+            </div>
+
+            {/* First Benchmark */}
+            <div className="accent-grad rounded-xl p-6 sm:p-8 text-center">
+                <h3 className="text-xl sm:text-2xl font-bold mb-4">🎯 First Benchmark — Phase 1 Delivery</h3>
+                <p className="text-blue-100/80 mb-6 max-w-2xl mx-auto text-sm">Automated daily ingestion of 0600 transcripts. Extraction into structured storage. Daily analysis view. Range analysis across all available history. Context framework generation. Basic web portal.</p>
+                <div className="flex justify-center gap-2 sm:gap-3 flex-wrap">
+                    {['0600 Transcripts','Daily View','Range View','3-Stage Framework','Structured Storage','Web Portal'].map((i,j)=>(
+                        <span key={j} className="bg-white/10 rounded-lg px-3 sm:px-4 py-2 text-xs sm:text-sm border border-white/10">{i}</span>
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+const root=ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App/>);
+</script>
+</body>
+</html>
