@@ -1,0 +1,508 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IO Hub Predictive Analytics — Problem &amp; Source (Complete Picture)</title>
+<style>
+/* Kindle-paper light theme. No dark mode. */
+:root{
+  --bg:#faf6ef; --panel:#fffdf8; --panel2:#f2ece0; --ink:#2b2620; --muted:#6f6657;
+  --line:#e2d9c8; --accent:#8a5a2b; --accent2:#3f7d4e; --warn:#b07417; --future:#7a5aa6;
+  --maxw:860px;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font:17px/1.72 Georgia,"Iowan Old Style","Palatino Linotype",Palatino,"Times New Roman",serif;}
+a{color:var(--accent);text-decoration:none}
+.layout{display:flex;min-height:100vh}
+/* sidebar */
+.side{width:300px;flex:0 0 300px;background:var(--panel);border-right:1px solid var(--line);
+  position:sticky;top:0;height:100vh;overflow:auto;padding:24px 18px}
+.brand{font-weight:800;font-size:18px;letter-spacing:.3px;margin-bottom:2px}
+.brand small{display:block;color:var(--muted);font-weight:500;font-size:12px;margin-top:4px}
+.nav{margin-top:22px;display:flex;flex-direction:column;gap:2px}
+.nav-link{color:var(--muted);padding:9px 12px;border-radius:8px;font-size:14px;
+  border-left:3px solid transparent;transition:.15s}
+.nav-link:hover{background:var(--panel2);color:var(--ink)}
+.nav-link.active{background:var(--panel2);color:var(--ink);border-left-color:var(--accent);font-weight:700}
+.side-foot{margin-top:26px;padding-top:16px;border-top:1px solid var(--line);
+  color:var(--muted);font-size:12px}
+/* main */
+.main{flex:1;min-width:0;max-width:var(--maxw);margin:0 auto;padding:54px 44px 120px}
+h1{font-size:30px;line-height:1.25;margin:0 0 8px}
+h2{font-size:23px;margin:8px 0 14px;padding-bottom:8px;border-bottom:1px solid var(--line)}
+h3{font-size:17px;margin:20px 0 8px}
+section{padding-top:30px;margin-top:18px;scroll-margin-top:20px}
+.lead{color:var(--muted);font-size:18px;margin-bottom:6px}
+.muted{color:var(--muted)}
+.kicker{color:var(--accent);font-weight:700;letter-spacing:.14em;text-transform:uppercase;font-size:12px}
+.callout{border-radius:12px;padding:16px 18px;margin:16px 0;border:1px solid var(--line);background:var(--panel)}
+.callout.q{border-left:4px solid var(--accent2)}
+.callout.tech{border-left:4px solid var(--accent)}
+.callout.warn{border-left:4px solid var(--warn)}
+.callout h4{margin:0 0 6px;font-size:14px;text-transform:uppercase;letter-spacing:.08em}
+.callout.q h4{color:var(--accent2)} .callout.tech h4{color:var(--accent)} .callout.warn h4{color:var(--warn)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px;margin:18px 0}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px;box-shadow:0 1px 2px rgba(60,45,20,.05)}
+.kpi .n{font-size:27px;font-weight:800;color:var(--accent)}
+.kpi .l{color:var(--muted);font-size:13px;margin-top:2px}
+/* use-case cards */
+.uc-card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin:12px 0;box-shadow:0 1px 2px rgba(60,45,20,.05)}
+.uc-card.primary{border-color:#cfe0d2;background:linear-gradient(180deg,#f1f7f1,var(--panel))}
+.uc-card.future{opacity:.85}
+.uc-head{display:flex;align-items:center;gap:12px}
+.uc-head h3{margin:0;font-size:16px}
+.uc-num{display:inline-grid;place-items:center;width:30px;height:30px;border-radius:8px;
+  background:var(--panel2);color:var(--accent);font-weight:800;flex:0 0 30px}
+.uc-obj{margin:8px 0 6px;color:var(--ink)}
+.uc-card ul{margin:6px 0 0;padding-left:20px;color:var(--muted)}
+.uc-card li{margin:3px 0}
+.badge{font-size:11px;padding:2px 8px;border-radius:999px;font-weight:700;vertical-align:middle}
+.badge-primary{background:#e6f1e8;color:#2f6b40;border:1px solid #c5dcc9}
+.badge-future{background:#efe8f6;color:#6a4f95;border:1px solid #d9cbe9}
+/* flow */
+.flow{display:flex;flex-wrap:wrap;align-items:stretch;gap:8px;margin:16px 0}
+.step{display:flex;gap:10px;align-items:flex-start;background:var(--panel);border:1px solid var(--line);
+  border-radius:10px;padding:10px 12px;flex:1 1 200px;min-width:180px}
+.step-n{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;
+  background:var(--accent);color:var(--panel);font-size:13px;font-weight:700;flex:0 0 24px}
+.arrow{display:none}
+/* tables */
+.tbl{width:100%;border-collapse:collapse;margin:8px 0 4px;font-size:14px}
+.tbl th{text-align:left;color:var(--muted);font-weight:600;border-bottom:1px solid var(--line);
+  padding:8px 10px;position:sticky}
+.tbl td{border-bottom:1px solid var(--line);padding:8px 10px;vertical-align:top}
+.tbl tr:hover td{background:var(--panel2)}
+.fld{font-family:ui-monospace,Consolas,monospace;color:#7dd3fc;white-space:nowrap}
+.typ{color:var(--warn);font-family:ui-monospace,Consolas,monospace;font-size:12px;white-space:nowrap}
+.why{color:var(--muted)}
+.schema-group{margin:22px 0}
+code,.mono{font-family:ui-monospace,Consolas,monospace;background:var(--panel2);
+  padding:1px 6px;border-radius:6px;font-size:13px}
+pre{background:#0b0f14;border:1px solid var(--line);border-radius:10px;padding:16px;overflow:auto;font-size:13px}
+.pill{display:inline-block;background:var(--panel2);border:1px solid var(--line);border-radius:999px;
+  padding:3px 11px;margin:3px 4px 3px 0;font-size:13px}
+.note{font-size:13px;color:var(--muted);margin-top:6px}
+hr{border:none;border-top:1px solid var(--line);margin:30px 0}
+@media(max-width:880px){.side{display:none}.main{padding:30px 18px 80px}}
+</style></head>
+<body>
+<div class="layout">
+  <aside class="side">
+    <div class="brand">IO Hub · Predictive Analytics
+      <small>Problem &amp; Source — the complete picture</small></div>
+    <nav class="nav"><a href="#problem" class="nav-link" data-target="problem">1 · Problem Statement</a>
+<a href="#goal" class="nav-link" data-target="goal">2 · What We're Trying to Achieve</a>
+<a href="#business" class="nav-link" data-target="business">3 · The Business (Intermodal 101)</a>
+<a href="#ops" class="nav-link" data-target="ops">4 · Terminal Operations</a>
+<a href="#usecases" class="nav-link" data-target="usecases">5 · The 8 Use-Case Groups</a>
+<a href="#source" class="nav-link" data-target="source">6 · The Source Data (JSON)</a>
+<a href="#schema" class="nav-link" data-target="schema">7 · Field Catalog (what each column tells us)</a>
+<a href="#quality" class="nav-link" data-target="quality">8 · Data Reality &amp; Caveats</a>
+<a href="#scope" class="nav-link" data-target="scope">9 · POC Scope &amp; Next Step</a></nav>
+    <div class="side-foot">
+      Synthesized from:<br>
+      • Container Inventory — Important Fields<br>
+      • Intermodal Business &amp; Terminal Operations<br>
+      • IO Hub Predictive &amp; Analytics Use Cases<br>
+      • <span class="mono">equipmentActivityReported</span> JSON<br><br>
+      Generated May 31, 2026 · solution discussed separately
+    </div>
+  </aside>
+
+  <main class="main">
+    <p class="kicker">Knowledge Pack · Pre-Solution</p>
+    <h1>Intermodal Operations Hub — Predictive Analytics</h1>
+    <p class="lead">The complete picture of <b>what we have</b> and <b>what we are trying to solve</b> —
+       before we talk about how to solve it.</p>
+
+    <div class="grid">
+      <div class="kpi"><div class="n">845,277</div><div class="l">equipment-activity events</div></div>
+      <div class="kpi"><div class="n">119</div><div class="l">fields per record</div></div>
+      <div class="kpi"><div class="n">32</div><div class="l">terminals</div></div>
+      <div class="kpi"><div class="n">~3.75 GB</div><div class="l">single JSON source export</div></div>
+    </div>
+
+    <!-- 1 PROBLEM -->
+    <section id="problem">
+      <h2>1 · Problem Statement</h2>
+      <p>An <b>Intermodal Operations Hub (IO Hub)</b> moves containers and trailers across the
+      country using <b>rail for the long haul</b> and <b>trucks for first/last mile</b>. Every day,
+      thousands of containers, chassis, and railcars flow through dozens of terminals — gating in,
+      sitting in the yard, mounting onto trains, traveling, and gating out again.</p>
+
+      <p>The operation is reactive. Teams find out a yard is full <i>after</i> it is full, learn a
+      gate is congested <i>while</i> trucks are already queued, and discover a chassis shortage
+      <i>when</i> a driver is already waiting. There is rich event data, but it is not yet turned
+      into <b>foresight</b>.</p>
+
+      <div class="callout q">
+        <h4>In plain words</h4>
+        We have a detailed minute-by-minute diary of every container's movements, but no one has
+        used that diary to <b>see a few hours into the future</b> — so the yard, the gate, and the
+        equipment are all managed by reacting instead of planning.
+      </div>
+
+      <p><b>The core problem:</b> we cannot reliably answer simple forward-looking questions such as —</p>
+      <ul>
+        <li>“How full will <b>Terminal X's yard</b> be in 6 hours? Will it breach capacity?”</li>
+        <li>“How many trucks will hit the <b>gate</b> in the next 1–3 hours?”</li>
+        <li>“Which containers are <b>sitting too long</b> (dwell), and which equipment is idle or bad-ordered?”</li>
+        <li>“Will we have <b>enough empties / chassis / railcars</b> where and when they're needed?”</li>
+      </ul>
+    </section>
+
+    <!-- 2 GOAL -->
+    <section id="goal">
+      <h2>2 · What We're Trying to Achieve</h2>
+      <p>Turn the existing <span class="mono">equipmentActivityReported</span> event stream into
+      <b>predictive, actionable insight</b> — moving the operation from <i>reactive</i> to
+      <i>proactive</i>.</p>
+      <div class="grid">
+        <div class="kpi"><div class="n">See ahead</div><div class="l">Forecast yard fill, gate flow &amp; dwell hours in advance</div></div>
+        <div class="kpi"><div class="n">Prevent</div><div class="l">Flag congestion &amp; shortages before they bite</div></div>
+        <div class="kpi"><div class="n">Optimize</div><div class="l">Plan space, staffing, lanes &amp; equipment reuse</div></div>
+        <div class="kpi"><div class="n">Answer</div><div class="l">Let users ask plain-English questions of the data</div></div>
+      </div>
+      <div class="callout tech">
+        <h4>Scope of THIS document</h4>
+        This is the <b>problem &amp; source</b> brief. It establishes the business, the operations,
+        the use cases, and exactly what the source data contains. <b>The solution
+        (data pipeline, models, forecasts) is discussed separately.</b>
+      </div>
+    </section>
+
+    <!-- 3 BUSINESS -->
+    <section id="business">
+      <h2>3 · The Business — Intermodal 101</h2>
+      <p><b>Intermodal transportation</b> moves freight using more than one mode — primarily
+      <b>rail</b> (long-haul) and <b>truck</b> (first/last mile) — without handling the freight
+      itself when switching modes, because it stays inside the same container.</p>
+
+      <h3>Core assets</h3>
+      <span class="pill">Containers (CSXU / UMAX …)</span>
+      <span class="pill">Chassis (wheeled platforms)</span>
+      <span class="pill">Railcars &amp; Trains</span>
+
+      <div class="callout q">
+        <h4>The primary objective (verbatim from the business doc)</h4>
+        “Ensure the <b>right equipment</b> (containers + chassis) is available at the
+        <b>right terminal</b>, at the <b>right time</b>, to meet customer demand while
+        optimizing cost and utilization.”
+      </div>
+
+      <h3>End-to-end flow of a container</h3>
+      <div class="flow"><div class="step"><span class="step-n">1</span><div><b>Container request</b><br><span class="muted">Reservation / booking is placed.</span></div></div><div class=arrow>→</div><div class="step"><span class="step-n">2</span><div><b>Empty positioning</b><br><span class="muted">Empty container staged at the terminal.</span></div></div><div class=arrow>→</div><div class="step"><span class="step-n">3</span><div><b>Gate-In</b><br><span class="muted">Container enters the terminal by truck → added to yard inventory.</span></div></div><div class=arrow>→</div><div class="step"><span class="step-n">4</span><div><b>Loading to train</b><br><span class="muted">Container moved from yard, mounted/lifted onto a railcar.</span></div></div><div class=arrow>→</div><div class="step"><span class="step-n">5</span><div><b>Train movement</b><br><span class="muted">Loaded train travels enroute between terminals.</span></div></div><div class=arrow>→</div><div class="step"><span class="step-n">6</span><div><b>Train arrival &amp; unload</b><br><span class="muted">Containers removed from railcars into the yard/chassis.</span></div></div><div class=arrow>→</div><div class="step"><span class="step-n">7</span><div><b>Gate-Out</b><br><span class="muted">Customer/driver picks up → inventory reduced.</span></div></div><div class=arrow>→</div><div class="step"><span class="step-n">8</span><div><b>Reuse / reposition</b><br><span class="muted">Container is reused or repositioned for the next cycle.</span></div></div></div>
+
+      <h3>Container states</h3>
+      <table class="tbl">
+        <thead><tr><th>State</th><th>Meaning</th></tr></thead>
+        <tbody>
+          <tr><td class="fld">Empty</td><td>Available for booking</td></tr>
+          <tr><td class="fld">Loaded</td><td>Carrying a customer shipment</td></tr>
+          <tr><td class="fld">Mounted Empty</td><td>Empty container on a chassis (ready)</td></tr>
+          <tr><td class="fld">Mounted Load</td><td>Loaded container on a chassis</td></tr>
+          <tr><td class="fld">Grounded</td><td>Not on a chassis (stacked/stored)</td></tr>
+        </tbody>
+      </table>
+      <p class="note">Business tension: too many <b>mounted empties</b> = wasted cost; too few = service delay.
+      <b>Grounded</b> = storage; <b>Mounted</b> = readiness.</p>
+    </section>
+
+    <!-- 4 OPERATIONS -->
+    <section id="ops">
+      <h2>4 · Terminal Operations</h2>
+      <p>A terminal's day revolves around three things: the <b>gate</b> (entry/exit), the
+      <b>yard</b> (storage), and the <b>train</b> (load/unload). These are exactly the flows our
+      data captures.</p>
+
+      <h3>Gate operations — the inventory valve</h3>
+      <div class="grid">
+        <div class="kpi"><div class="n">Gate-In</div><div class="l">Truck brings a unit in → validated → sent to yard or direct-load. <b>Adds</b> to inventory.</div></div>
+        <div class="kpi"><div class="n">Gate-Out</div><div class="l">Driver picks up → mounted or grounded lift → leaves. <b>Reduces</b> inventory.</div></div>
+      </div>
+      <div class="callout q">
+        <h4>The single most important equation</h4>
+        <b>Net Inventory = Gate-In − Gate-Out</b> &nbsp;(plus train arrivals − train departures).
+        This is what drives yard capacity, demand planning, and repositioning decisions.
+      </div>
+
+      <h3>Yard, chassis &amp; train</h3>
+      <ul>
+        <li><b>Yard:</b> arrival → storage → assignment to a booking → mount/lift → load or gate-out.</li>
+        <li><b>Chassis:</b> bare → mounted → used → returned → reused. Availability directly limits pickups.</li>
+        <li><b>Load to train:</b> reservations set demand; units staged &amp; lifted; track Units Loaded vs Left-to-Load.</li>
+        <li><b>Train unload:</b> arrivals removed into yard/chassis → feeds the next demand cycle.</li>
+        <li><b>Enroute:</b> loads &amp; empties already moving between terminals.</li>
+      </ul>
+      <p class="note">Operational challenges called out in the source: over-/under-usage of chassis,
+      bad-order equipment reducing usable capacity, and yard overflow.</p>
+    </section>
+
+    <!-- 5 USE CASES -->
+    <section id="usecases">
+      <h2>5 · The 8 Predictive Use-Case Groups</h2>
+      <p>The IO Hub vision defines <b>8 groups</b> of predictive &amp; analytics use cases. They are
+      the menu of value we want to unlock from the data.</p>
+      
+        <div class="uc-card primary">
+          <div class="uc-head"><span class="uc-num">1</span>
+            <h3>Inventory Prediction (Yard Capacity Forecast) <span class="badge badge-primary">POC focus</span></h3></div>
+          <p class="uc-obj"><b>Objective:</b> Predict yard congestion and optimize asset utilization.</p>
+          <ul><li>Forecast containers/trailers in the yard over time (next 6–24 h)</li><li>Identify yard blocks/zones likely to reach capacity</li><li>Predict <b>when</b> congestion will occur</li><li>Empty-container availability &amp; dwell-time prediction</li><li>Inbound surge detection; chassis availability / shortage / turnaround / idle / bad-order</li></ul>
+        </div>
+
+        <div class="uc-card ">
+          <div class="uc-head"><span class="uc-num">2</span>
+            <h3>Equipment Usage &amp; Availability </h3></div>
+          <p class="uc-obj"><b>Objective:</b> Understand how equipment is utilized and when it will be short.</p>
+          <ul><li>Predict equipment utilization trends</li><li>Forecast downtime from maintenance &amp; repairs</li><li>Identify potential equipment shortages</li></ul>
+        </div>
+
+        <div class="uc-card future">
+          <div class="uc-head"><span class="uc-num">3</span>
+            <h3>Intermodal Crew <span class="badge badge-future">future scope</span></h3></div>
+          <p class="uc-obj"><b>Objective:</b> Crew planning and assignment.</p>
+          <ul><li>Future scope — not in this dataset's reach yet</li></ul>
+        </div>
+
+        <div class="uc-card ">
+          <div class="uc-head"><span class="uc-num">4</span>
+            <h3>Railcar Demand &amp; Availability Forecast </h3></div>
+          <p class="uc-obj"><b>Objective:</b> Balance railcar demand and supply.</p>
+          <ul><li>Demand: railcars required (reservations / projected volumes)</li><li>Supply: railcars in yard, en route, being unloaded</li><li>Gap analysis: shortage / surplus + recommendations</li></ul>
+        </div>
+
+        <div class="uc-card primary">
+          <div class="uc-head"><span class="uc-num">5</span>
+            <h3>Gate Operations Analytics <span class="badge badge-primary">POC focus</span></h3></div>
+          <p class="uc-obj"><b>Objective:</b> Optimize gate flow and reduce truck wait times.</p>
+          <ul><li>Gate congestion: truck arrivals in next 1–3 h</li><li>Inbound vs outbound flow (drop vs pickup)</li><li>Throughput forecast (transactions / hour / day)</li><li>Peak-hour patterns, lane-level optimization, gate dwell, driver scoring</li></ul>
+        </div>
+
+        <div class="uc-card ">
+          <div class="uc-head"><span class="uc-num">6</span>
+            <h3>Intermodal Train Analytics </h3></div>
+          <p class="uc-obj"><b>Objective:</b> Improve train performance &amp; visibility.</p>
+          <ul><li>Avg train footage by destination</li><li>Container distribution by destination/shipper</li><li>On-time performance, load/unload times</li></ul>
+        </div>
+
+        <div class="uc-card future">
+          <div class="uc-head"><span class="uc-num">7</span>
+            <h3>Safety Prediction <span class="badge badge-future">future scope</span></h3></div>
+          <p class="uc-obj"><b>Objective:</b> Proactively identify and mitigate safety risks.</p>
+          <ul><li>Predict high-risk zones, incident patterns, unsafe-condition alerts (future scope)</li></ul>
+        </div>
+
+        <div class="uc-card future">
+          <div class="uc-head"><span class="uc-num">8</span>
+            <h3>Conversational Analytics (Chat Module) <span class="badge badge-future">future scope</span></h3></div>
+          <p class="uc-obj"><b>Objective:</b> Let business users ask questions in plain English.</p>
+          <ul><li>“Which yard block will be full in the next 4 hours?”</li><li>“What is the expected gate congestion at 5 PM?”</li><li>“How many railcars are currently idle?”</li></ul>
+        </div>
+      <div class="callout tech">
+        <h4>Reading the badges</h4>
+        <span class="badge badge-primary">POC focus</span> = directly supported by the data we already have ·
+        <span class="badge badge-future">future scope</span> = needs more sources or later phases.
+      </div>
+    </section>
+
+    <!-- 6 SOURCE -->
+    <section id="source">
+      <h2>6 · The Source Data — <span class="mono">equipmentActivityReported</span></h2>
+      <p>Everything above is powered by <b>one real dataset</b>: an export of equipment-activity
+      events from the container-history system (<span class="mono">IPRO_CONTAINER_HISTORY</span>).</p>
+      <div class="grid">
+        <div class="kpi"><div class="n">845,277</div><div class="l">event records</div></div>
+        <div class="kpi"><div class="n">119</div><div class="l">fields per event</div></div>
+        <div class="kpi"><div class="n">32</div><div class="l">distinct terminals</div></div>
+        <div class="kpi"><div class="n">Mar 16 → May 29 2026</div><div class="l">time span (~2.5 months)</div></div>
+      </div>
+
+      <h3>What one record looks like</h3>
+      <p>It is MongoDB extended JSON — one big array of event objects. Each event is a snapshot of a
+      single piece of equipment at a moment in time. A trimmed real example:</p>
+<pre>{
+  "equipmentId": "UNKN324740",
+  "equipmentTypeCode": "H",                <span class="muted">// H = chassis</span>
+  "loadEmptyStatus": "E",                  <span class="muted">// Empty</span>
+  "currentStatus": "On Ramp",
+  "trainMoveCategory": "Storage",
+  "eventDescription": "Created",
+  "eventDateTime": "2026-05-29T20:54:21Z", <span class="muted">// the heartbeat</span>
+  "terminal": { "code": "WOR", "name": "WORCESTER", "region": "North" },
+  "shipperName": "JB HUNT TRANSPORT SERVICES INC",
+  "flatcarId": "BNSF211633",
+  "holdFlag": 0, "damageFlag": -1,
+  "header": { "uuid": "36395582-…", "messageTypeId": "imod_equipment_activity_reported" }
+}</pre>
+      <p class="note">The full proto definition lists every field; the
+      <i>Container Inventory — Important Fields</i> doc highlights the ones that matter for
+      reporting and prediction, catalogued next.</p>
+    </section>
+
+    <!-- 7 SCHEMA -->
+    <section id="schema">
+      <h2>7 · Field Catalog — what each column tells us</h2>
+      <p>The 119 raw fields group into seven meaningful families. Below are the
+      <b>key fields</b> for tracking, reporting, and (later) prediction.</p>
+      
+        <div class="schema-group">
+          <h3>Identity &amp; Ownership <span class="muted">— Uniquely identify the equipment and who owns it.</span></h3>
+          <table class="tbl">
+            <thead><tr><th>Field</th><th>Type</th><th>What it is</th><th>Why it matters</th></tr></thead>
+            <tbody><tr><td class='fld'>equipmentId</td><td class='typ'>string</td><td>Unique container/trailer ID (prefix + number), e.g. UNKN324740.</td><td class='why'>Primary key — tracks one asset across every event.</td></tr>
+<tr><td class='fld'>unitPrefix</td><td class='typ'>string</td><td>Equipment owner/type prefix (CSXU, UMXU, UNKN…).</td><td class='why'>Ownership &amp; type classification.</td></tr>
+<tr><td class='fld'>chassisId</td><td class='typ'>string</td><td>ID of the chassis paired with the container.</td><td class='why'>Container ↔ chassis pairing.</td></tr>
+<tr><td class='fld'>chassisPrefix</td><td class='typ'>string</td><td>Chassis owner prefix (e.g. TSFZ).</td><td class='why'>Chassis ownership/type tracking.</td></tr>
+<tr><td class='fld'>railcarPrefix / railcarClass / railcarType</td><td class='typ'>string</td><td>Railcar owner & class (e.g. DTTX / S635 / 3W).</td><td class='why'>Railcar-level reporting.</td></tr>
+<tr><td class='fld'>flatcarId</td><td class='typ'>string</td><td>Flatcar the unit rides on (e.g. BNSF211633).</td><td class='why'>Links the unit to a physical railcar.</td></tr>
+<tr><td class='fld'>equipmentTypeCode</td><td class='typ'>char</td><td>C = Container, T = Trailer, H = Chassis.</td><td class='why'>Segments the dataset by asset type.</td></tr>
+<tr><td class='fld'>isoSizeType / isoTypeCode / chassisSize</td><td class='typ'>string/int</td><td>ISO size-type (U_53), container/chassis size (53 ft).</td><td class='why'>Capacity &amp; equipment-mix analysis.</td></tr></tbody>
+          </table>
+        </div>
+
+        <div class="schema-group">
+          <h3>Shipment &amp; Business Context <span class="muted">— Who the shipment is for and where it goes.</span></h3>
+          <table class="tbl">
+            <thead><tr><th>Field</th><th>Type</th><th>What it is</th><th>Why it matters</th></tr></thead>
+            <tbody><tr><td class='fld'>shipperName</td><td class='typ'>string</td><td>Shipper from the waybill (e.g. JB HUNT TRANSPORT SERVICES INC).</td><td class='why'>Customer-level reporting.</td></tr>
+<tr><td class='fld'>consigneeName</td><td class='typ'>string</td><td>Party receiving the shipment.</td><td class='why'>Delivery / customer visibility.</td></tr>
+<tr><td class='fld'>originCity / destinationCity</td><td class='typ'>string</td><td>Origin and waybill destination city.</td><td class='why'>Lane &amp; flow analysis.</td></tr>
+<tr><td class='fld'>finalDestination / finalDestinationCity</td><td class='typ'>string</td><td>End destination (incl. outside the network).</td><td class='why'>End-to-end shipment visibility.</td></tr>
+<tr><td class='fld'>unitAgreementName</td><td class='typ'>string</td><td>Intermodal contract/agreement name.</td><td class='why'>Billing &amp; contract analytics.</td></tr>
+<tr><td class='fld'>billingPatronName / billingPatronCode</td><td class='typ'>string</td><td>Billing party.</td><td class='why'>Revenue / customer attribution.</td></tr>
+<tr><td class='fld'>bookingNumber / billOfLadingNumber</td><td class='typ'>string</td><td>Booking &amp; bill-of-lading references.</td><td class='why'>Ties an event to a reservation.</td></tr></tbody>
+          </table>
+        </div>
+
+        <div class="schema-group">
+          <h3>Movement &amp; Train Classification <span class="muted">— How the unit is moving through the rail network.</span></h3>
+          <table class="tbl">
+            <thead><tr><th>Field</th><th>Type</th><th>What it is</th><th>Why it matters</th></tr></thead>
+            <tbody><tr><td class='fld'>trainMoveCategory</td><td class='typ'>string</td><td>Inbound, Outbound, Transrail, Through, <b>Storage</b>.</td><td class='why'>The core operational category — drives gate &amp; inventory KPIs.</td></tr>
+<tr><td class='fld'>equipmentMoveType</td><td class='typ'>string</td><td>Move between locations (Y-R yard→rail, R-Y rail→yard…).</td><td class='why'>Tracks yard ↔ rail transitions.</td></tr>
+<tr><td class='fld'>intermodalActivityType</td><td class='typ'>string</td><td>Activity classification (e.g. UNSPECIFIED).</td><td class='why'>Event typing.</td></tr>
+<tr><td class='fld'>arrivalTrain6 / departureTrain6</td><td class='typ'>string</td><td>Inbound &amp; outbound train IDs.</td><td class='why'>Links the unit to train operations.</td></tr>
+<tr><td class='fld'>fromRailcar / toRailcar</td><td class='typ'>string</td><td>Railcar a unit came off / goes onto.</td><td class='why'>Load/unload planning &amp; execution.</td></tr>
+<tr><td class='fld'>railcarSequence / trainProcessingTrack</td><td class='typ'>int/string</td><td>Position in train, processing track.</td><td class='why'>Load-plan &amp; yard-track detail.</td></tr></tbody>
+          </table>
+        </div>
+
+        <div class="schema-group">
+          <h3>Status &amp; Condition <span class="muted">— The current state and health of the unit.</span></h3>
+          <table class="tbl">
+            <thead><tr><th>Field</th><th>Type</th><th>What it is</th><th>Why it matters</th></tr></thead>
+            <tbody><tr><td class='fld'>loadEmptyStatus</td><td class='typ'>char</td><td>L = Loaded, E = Empty.</td><td class='why'>Core capacity &amp; utilization metric.</td></tr>
+<tr><td class='fld'>currentStatus</td><td class='typ'>string</td><td>Location/state — Yard, On Ramp, Offsite…</td><td class='why'>Real-time inventory tracking.</td></tr>
+<tr><td class='fld'>holdFlag / holdReason</td><td class='typ'>int/string</td><td>On hold? + reason (CUSTOMS, STOPORDER…).</td><td class='why'>Exception &amp; delay analysis.</td></tr>
+<tr><td class='fld'>damageFlag / chassisDamageFlag</td><td class='typ'>int</td><td>1 = damaged ( -1 = unknown ).</td><td class='why'>Bad-order &amp; maintenance tracking.</td></tr>
+<tr><td class='fld'>priorityShipmentFlag</td><td class='typ'>string</td><td>High-priority shipment indicator.</td><td class='why'>SLA / expedite handling.</td></tr>
+<tr><td class='fld'>coneStatus / equipmentLocationOnRailcar</td><td class='typ'>string</td><td>Securement &amp; stack position (BOTTOM…).</td><td class='why'>Loading detail &amp; safety.</td></tr></tbody>
+          </table>
+        </div>
+
+        <div class="schema-group">
+          <h3>Timing &amp; Lifecycle <span class="muted">— When the key events happened.</span></h3>
+          <table class="tbl">
+            <thead><tr><th>Field</th><th>Type</th><th>What it is</th><th>Why it matters</th></tr></thead>
+            <tbody><tr><td class='fld'>eventDateTime</td><td class='typ'>datetime (UTC)</td><td>Timestamp of the event — the heartbeat of all analytics.</td><td class='why'>Every time-series &amp; forecast is built on this.</td></tr>
+<tr><td class='fld'>yardArrivalTime</td><td class='typ'>datetime</td><td>Physical arrival at the terminal.</td><td class='why'>Start of dwell-time calculation.</td></tr>
+<tr><td class='fld'>yardDepartureTime</td><td class='typ'>datetime</td><td>Departure from the terminal.</td><td class='why'>End of dwell &amp; throughput.</td></tr>
+<tr><td class='fld'>creationTime / lastUpdateTime</td><td class='typ'>datetime</td><td>Record created / last updated.</td><td class='why'>Data freshness &amp; lineage.</td></tr>
+<tr><td class='fld'>groundedDate / notifyDate / holdReleaseDate</td><td class='typ'>datetime</td><td>Grounded, customer-notify, hold-release times.</td><td class='why'>Lifecycle &amp; gate-out readiness.</td></tr></tbody>
+          </table>
+        </div>
+
+        <div class="schema-group">
+          <h3>Location &amp; Source <span class="muted">— Where, and from which system, the event occurred.</span></h3>
+          <table class="tbl">
+            <thead><tr><th>Field</th><th>Type</th><th>What it is</th><th>Why it matters</th></tr></thead>
+            <tbody><tr><td class='fld'>terminal.{code,name,region}</td><td class='typ'>object</td><td>Terminal code (WOR), name (WORCESTER), region (North).</td><td class='why'>Location-based KPIs — the unit of analysis.</td></tr>
+<tr><td class='fld'>terminal.{fsac,milepost,city,state}</td><td class='typ'>object</td><td>Terminal geography &amp; rail milepost.</td><td class='why'>Geospatial &amp; network context.</td></tr>
+<tr><td class='fld'>eventCity / eventState</td><td class='typ'>string</td><td>City/state where the event fired.</td><td class='why'>Location cross-check.</td></tr>
+<tr><td class='fld'>parkingLocation / trainProcessingTrack</td><td class='typ'>string</td><td>Physical spot in the yard / track.</td><td class='why'>Yard-zone &amp; congestion detail.</td></tr>
+<tr><td class='fld'>eventSource / eventDescription</td><td class='typ'>string</td><td>Source system (IPRO_CONTAINER_HISTORY) &amp; event label (Created, Arrived, Notified…).</td><td class='why'>Event classification &amp; filtering.</td></tr>
+<tr><td class='fld'>header.{uuid,time,messageTypeId}</td><td class='typ'>object</td><td>Message envelope: unique id, emit time, type.</td><td class='why'>Idempotency &amp; streaming lineage.</td></tr></tbody>
+          </table>
+        </div>
+
+        <div class="schema-group">
+          <h3>Physical Attributes <span class="muted">— Size and weight of the unit and its cargo.</span></h3>
+          <table class="tbl">
+            <thead><tr><th>Field</th><th>Type</th><th>What it is</th><th>Why it matters</th></tr></thead>
+            <tbody><tr><td class='fld'>containerHeight / containerWidth / equipmentLength</td><td class='typ'>int (mm)</td><td>Physical dimensions.</td><td class='why'>Capacity &amp; clearance.</td></tr>
+<tr><td class='fld'>grossWeight / tareWeight / cargoWeight</td><td class='typ'>int</td><td>Total, empty, and cargo weight.</td><td class='why'>Weight planning &amp; load limits.</td></tr>
+<tr><td class='fld'>equipmentCastingType</td><td class='typ'>string</td><td>Casting type (ISO…).</td><td class='why'>Equipment classification.</td></tr></tbody>
+          </table>
+        </div>
+    </section>
+
+    <!-- 8 QUALITY -->
+    <section id="quality">
+      <h2>8 · Data Reality &amp; Caveats</h2>
+      <p>Being honest about the source is part of the complete picture.</p>
+      <div class="callout warn">
+        <h4>Known data realities</h4>
+        <ul style="margin:6px 0 0;padding-left:20px">
+          <li><b>Null sentinels:</b> date <span class="mono">-2208988800000</span> (1900-01-01) and
+              <span class="mono">N/A</span> / <span class="mono">-1</span> values mean
+              <b>unset</b>, not real data — must be treated as missing.</li>
+          <li><b>Events ≠ true inventory:</b> these are activity <i>events</i>; yard inventory must be
+              <b>derived</b> from arrival/departure deltas (assumptions to be documented in the solution).</li>
+          <li><b>Single export, finite window:</b> ~2.5 months of history — any forecast horizon must be
+              scaled to what the history can support.</li>
+          <li><b>Sparse fields:</b> many of the 119 columns are mostly <span class="mono">N/A</span> for a
+              given event type (e.g. railcar fields on a pure yard event).</li>
+        </ul>
+      </div>
+      <div class="callout q">
+        <h4>In plain words</h4>
+        The data is rich and real, but it's a <b>diary of events</b>, not a tidy ledger of "how many
+        are in the yard right now." We'll have to <b>reconstruct</b> the counts we care about — and we
+        must ignore the placeholder values that only <i>look</i> like data.
+      </div>
+    </section>
+
+    <!-- 9 SCOPE -->
+    <section id="scope">
+      <h2>9 · POC Scope &amp; the Next Step</h2>
+      <p>Of the 8 use-case groups, three are <b>directly supported by the data we already have</b> —
+      no extra source systems required. These are the natural POC focus:</p>
+      <table class="tbl">
+        <thead><tr><th>Priority</th><th>Use case</th><th>What it answers</th><th>Source group</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td class="fld">Yard Inventory / Capacity</td><td>Hourly yard count + forecast + congestion flag</td><td>§1 Inventory</td></tr>
+          <tr><td>2</td><td class="fld">Gate / Throughput</td><td>Inbound vs outbound flow + near-term forecast</td><td>§5 Gate Ops</td></tr>
+          <tr><td>3</td><td class="fld">Dwell &amp; Equipment Quality</td><td>Dwell-time, idle equipment, hold/damage rates</td><td>§1 / §2</td></tr>
+        </tbody>
+      </table>
+      <div class="callout tech">
+        <h4>Where this goes next</h4>
+        With the problem and source now fully framed, the <b>solution discussion</b> covers: how we
+        ingest &amp; curate the data, how we derive the metrics, the forecasting approach, accuracy,
+        and the path to production on Microsoft Fabric. <i>That is a separate conversation.</i>
+      </div>
+      <hr>
+      <p class="note">Document synthesized from: <i>Container Inventory — Important Fields</i>,
+      <i>Intermodal Business &amp; Terminal Operations</i>, <i>IO Hub Predictive &amp; Analytics Use Cases</i>,
+      and the live <span class="mono">equipmentActivityReported</span> source. Generated May 31, 2026.</p>
+    </section>
+  </main>
+</div>
+
+<script>
+// scroll-spy: highlight the nav item for the section in view
+const links = [...document.querySelectorAll('.nav-link')];
+const map = new Map(links.map(a => [a.dataset.target, a]));
+const obs = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      links.forEach(l => l.classList.remove('active'));
+      const a = map.get(e.target.id);
+      if (a) a.classList.add('active');
+    }
+  });
+}, { rootMargin: '-10% 0px -75% 0px', threshold: 0 });
+document.querySelectorAll('section').forEach(s => obs.observe(s));
+</script>
+</body></html>
