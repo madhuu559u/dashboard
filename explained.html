@@ -1,0 +1,375 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IO Hub — The Numbers Explained (for everyone)</title>
+<style>
+/* Kindle-paper light theme. No dark mode. */
+:root{
+  --bg:#faf6ef; --panel:#fffdf8; --panel2:#f2ece0; --ink:#2b2620; --muted:#6f6657;
+  --line:#e2d9c8; --accent:#8a5a2b; --accent2:#3f7d4e; --warn:#b07417; --future:#7a5aa6;
+  --maxw:860px;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font:17px/1.72 Georgia,"Iowan Old Style","Palatino Linotype",Palatino,"Times New Roman",serif;}
+a{color:var(--accent);text-decoration:none}
+.layout{display:flex;min-height:100vh}
+.side{width:300px;flex:0 0 300px;background:var(--panel);border-right:1px solid var(--line);
+  position:sticky;top:0;height:100vh;overflow:auto;padding:24px 18px}
+.brand{font-weight:800;font-size:18px;letter-spacing:.3px;margin-bottom:2px}
+.brand small{display:block;color:var(--muted);font-weight:500;font-size:12px;margin-top:4px}
+.nav{margin-top:22px;display:flex;flex-direction:column;gap:2px}
+.nav-link{color:var(--muted);padding:9px 12px;border-radius:8px;font-size:14px;
+  border-left:3px solid transparent;transition:.15s}
+.nav-link:hover{background:var(--panel2);color:var(--ink)}
+.nav-link.active{background:var(--panel2);color:var(--ink);border-left-color:var(--accent);font-weight:700}
+.side-foot{margin-top:26px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:12px}
+.main{flex:1;min-width:0;max-width:var(--maxw);margin:0 auto;padding:54px 44px 120px}
+h1{font-size:30px;line-height:1.25;margin:0 0 8px}
+h2{font-size:23px;margin:8px 0 14px;padding-bottom:8px;border-bottom:1px solid var(--line)}
+h3{font-size:17px;margin:18px 0 8px}
+section{padding-top:30px;margin-top:18px;scroll-margin-top:20px}
+.lead{color:var(--muted);font-size:18px;margin-bottom:6px}
+.muted{color:var(--muted)}
+.kicker{color:var(--accent);font-weight:700;letter-spacing:.14em;text-transform:uppercase;font-size:12px}
+.callout{border-radius:12px;padding:16px 18px;margin:16px 0;border:1px solid var(--line);background:var(--panel)}
+.callout.q{border-left:4px solid var(--accent2)}
+.callout.tech{border-left:4px solid var(--accent)}
+.callout.warn{border-left:4px solid var(--warn)}
+.callout h4{margin:0 0 6px;font-size:14px;text-transform:uppercase;letter-spacing:.08em}
+.callout.q h4{color:var(--accent2)} .callout.tech h4{color:var(--accent)} .callout.warn h4{color:var(--warn)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px;margin:18px 0}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px;box-shadow:0 1px 2px rgba(60,45,20,.05)}
+.kpi .n{font-size:24px;font-weight:800;color:var(--accent)}
+.kpi .l{color:var(--muted);font-size:13px;margin-top:2px}
+.uc-card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin:12px 0;box-shadow:0 1px 2px rgba(60,45,20,.05)}
+.uc-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.uc-head h3{margin:0;font-size:16px}
+.uc-num{display:inline-grid;place-items:center;width:30px;height:30px;border-radius:8px;
+  background:var(--panel2);color:var(--accent);font-weight:800;flex:0 0 30px}
+.uc-obj{margin:8px 0 6px}
+.note{font-size:14px;color:var(--muted);margin-top:6px}
+.badge{font-size:11px;padding:2px 8px;border-radius:999px;font-weight:700;vertical-align:middle}
+.badge-primary{background:#e6f1e8;color:#2f6b40;border:1px solid #c5dcc9}
+.badge-future{background:#efe8f6;color:#6a4f95;border:1px solid #d9cbe9}
+.tbl{width:100%;border-collapse:collapse;margin:10px 0;font-size:14.5px}
+.tbl th{text-align:left;color:var(--muted);font-weight:600;border-bottom:1px solid var(--line);padding:8px 10px}
+.tbl td{border-bottom:1px solid var(--line);padding:8px 10px;vertical-align:top}
+.tbl tr:hover td{background:var(--panel2)}
+.fld{font-family:ui-monospace,Consolas,monospace;color:#1d6fa5;white-space:nowrap}
+.why{color:var(--muted)}
+code,.mono{font-family:ui-monospace,Consolas,monospace;background:var(--panel2);color:#3a342b;
+  padding:1px 6px;border-radius:6px;font-size:13px}
+pre{background:#f5efe3;color:#3a342b;border:1px solid var(--line);border-radius:10px;padding:16px;overflow:auto;
+  font-size:13px;font-family:ui-monospace,Consolas,monospace;line-height:1.5}
+.pill{display:inline-block;background:var(--panel2);border:1px solid var(--line);border-radius:999px;
+  padding:3px 11px;margin:3px 4px 3px 0;font-size:13px}
+hr{border:none;border-top:1px solid var(--line);margin:30px 0}
+.trophy{color:#b07417;font-weight:800}
+.race{font-family:ui-monospace,Consolas,monospace;font-size:14px}
+.race .win{color:#2f6b40;font-weight:800}
+.race .bad{color:#a85a3a}
+@media(max-width:880px){.side{display:none}.main{padding:30px 18px 80px}}
+</style></head>
+<body>
+<div class="layout">
+  <aside class="side">
+    <div class="brand">IO Hub · The Numbers Explained
+      <small>From “I don't understand” to “now I get it”</small></div>
+    <nav class="nav"><a href="#intro" class="nav-link" data-target="intro">Start Here — the big idea</a>
+<a href="#numbers" class="nav-link" data-target="numbers">1 · Every number, explained</a>
+<a href="#race" class="nav-link" data-target="race">2 · The model race</a>
+<a href="#algos" class="nav-link" data-target="algos">3 · What each algorithm does</a>
+<a href="#source" class="nav-link" data-target="source">4 · What data we have</a>
+<a href="#train" class="nav-link" data-target="train">5 · How we train &amp; pick a winner</a>
+<a href="#gate" class="nav-link" data-target="gate">6 · Why Gate looks 'low'</a>
+<a href="#moredata" class="nav-link" data-target="moredata">7 · What more data we need</a>
+<a href="#otheralgo" class="nav-link" data-target="otheralgo">8 · Other algorithms to try</a>
+<a href="#prod" class="nav-link" data-target="prod">9 · Is 1 year production-ready?</a>
+<a href="#howsee" class="nav-link" data-target="howsee">10 · How to read the screen</a></nav>
+    <div class="side-foot">
+      Written for a curious non-expert.<br>
+      Plain words in <b style="color:var(--accent2)">green</b>,
+      a little tech in <b style="color:var(--accent)">brown</b>.<br><br>
+      Generated May 31, 2026
+    </div>
+  </aside>
+
+  <main class="main">
+    <p class="kicker">Layman → Semi-technical · Read top to bottom</p>
+    <h1>What do all these numbers mean — and how did we get them?</h1>
+    <p class="lead">You saw cards full of numbers and a “leaderboard” of models. This page explains
+      every piece, in plain English, then a little deeper.</p>
+
+    <!-- INTRO -->
+    <section id="intro">
+      <h2>Start here — the one big idea</h2>
+      <p>We have a giant diary of what every container did over the last ~2.5 months. We use that
+      history to <b>teach a computer to guess the near future</b> — how full a yard will get, how
+      many trucks will arrive, how long things will sit.</p>
+      <div class="callout q">
+        <h4>The whole thing in one sentence</h4>
+        <b>Learn from the past → guess the future → check how close the guess was → keep the model
+        that guessed best.</b>
+      </div>
+      <p>That's it. Everything below is just the detail behind those four steps.</p>
+    </section>
+
+    <!-- 1 NUMBERS -->
+    <section id="numbers">
+      <h2>1 · Every number on the card, explained</h2>
+      <p>Here's a real Yard card and what each line is telling you:</p>
+<pre>Yard inventory (+24h)
+  winning model:   Ridge  · 1739 train pts
+  Last actual      52,348
+  Forecast (next)  52,422.5
+  MAE (error)      64.56
+  Accuracy (MAPE)  0.1%      <span class="muted"># = 99.9% accurate</span>
+  Congestion threshold 45,566
+  Forecast vs threshold OVER <span class="muted"># congestion predicted</span></pre>
+      <table class="tbl"><thead><tr><th>What you see</th><th>What it means</th>
+      <th>In plain words</th></tr></thead><tbody><tr><td class='fld'>Last actual</td><td>The most recent <b>real, measured</b> value.</td><td class='why'>“Right now there are 52,348 containers in the yard.”</td></tr><tr><td class='fld'>Forecast (next)</td><td>What the model <b>predicts</b> for the next period.</td><td class='why'>“In 24 hours I expect ~52,422.”</td></tr><tr><td class='fld'>MAE — Mean Absolute Error</td><td>Average miss, in the <b>same units</b> (containers, trucks…). Lower is better.</td><td class='why'>“On a fair test, I was off by about 65 containers on average.”</td></tr><tr><td class='fld'>MAPE — Mean Absolute % Error</td><td>Average miss as a <b>percentage</b>. <b>Accuracy = 100 − MAPE.</b></td><td class='why'>“0.1% error → 99.9% accurate.”</td></tr><tr><td class='fld'>train pts</td><td>How many historical points the model learned from. More = better.</td><td class='why'>Yard had 1,739 hourly points; Gate had only 67 daily points.</td></tr><tr><td class='fld'>Congestion threshold</td><td>A chosen ‘full’ capacity line for the yard.</td><td class='why'>45,566 = the line we don't want to cross.</td></tr><tr><td class='fld'>Forecast vs threshold</td><td>The <b>action signal</b>: is the forecast above the line?</td><td class='why'>OVER → congestion predicted → prepare space/staff.</td></tr></tbody></table>
+      <div class="callout q">
+        <h4>The one trick to remember</h4>
+        <b>MAE</b> = how far off in real units (containers). <b>MAPE</b> = how far off in percent.
+        <b>Accuracy = 100 − MAPE.</b> When MAE is small but MAPE is big, it just means the numbers
+        themselves are small (more on that in §6).
+      </div>
+    </section>
+
+    <!-- 2 RACE -->
+    <section id="race">
+      <h2>2 · The “model race” (the leaderboard)</h2>
+      <p>For each thing we predict, we don't pick one method and hope. We enter <b>six</b> different
+      algorithms into a <b>race</b>, give them all the same data, and let the most accurate one win.</p>
+      <div class="callout tech">
+        <h4>How the race is judged</h4>
+        We hide a recent slice of <b>real</b> history. Each algorithm predicts it. We measure who came
+        closest (lowest error). <b>Lowest number wins 🏆.</b> The winner is saved and used for the
+        live forecast.
+      </div>
+      <p>Your Yard leaderboard, read as a race result (lower = better):</p>
+      <div class="callout">
+        <div class="race">
+          <span class="win">Ridge 🏆 233.63</span> &nbsp; — smooth line, perfect for yard<br>
+          ARIMA 117.79 / Prophet 119.12 &nbsp; — close, time-series methods<br>
+          <span class="bad">RandomForest 5,362 · XGBoost 5,804 · HistGB 6,162</span> &nbsp; — tree models lost badly here
+        </div>
+      </div>
+      <p class="note">Why did the powerful tree models lose on yard? Because yard inventory is a
+      <b>smooth, slowly-drifting line</b> — a straight-line method (Ridge) fits it better than
+      complex trees, which overcomplicate it. <b>Different problems, different winners.</b></p>
+      <div class="callout warn">
+        <h4>One honest footnote</h4>
+        The leaderboard number (Ridge 233.63) comes from <b>cross-validation during training</b>; the
+        card's MAE (64.56) comes from the <b>final hold-out test</b>. Same idea, measured at two
+        stages — that's why they differ slightly.
+      </div>
+    </section>
+
+    <!-- 3 ALGORITHMS -->
+    <section id="algos">
+      <h2>3 · What each algorithm actually does</h2>
+      <p>The six racers, in plain words — and what kind of problem each is good at.</p>
+      
+        <div class="uc-card">
+          <div class="uc-head"><span class="uc-num">R</span>
+            <h3>Ridge <span class="muted">· Linear regression</span> <span class="badge badge-primary">🏆 Yard, Inbound</span></h3></div>
+          <p class="uc-obj"><b>What it does:</b> Draws the best straight-line / smooth relationship through the data.</p>
+          <div class="callout q"><h4>In plain words</h4>Like drawing a steady trend line through dots that mostly drift in one direction.</div>
+          <p class="note"><b>Best for:</b> Smooth, slowly-changing numbers — e.g. <b>yard inventory</b>.</p>
+        </div>
+
+        <div class="uc-card">
+          <div class="uc-head"><span class="uc-num">R</span>
+            <h3>RandomForest <span class="muted">· Tree ensemble</span> <span class="badge badge-primary">🏆 Outbound</span></h3></div>
+          <p class="uc-obj"><b>What it does:</b> Asks hundreds of yes/no question-trees and averages their votes.</p>
+          <div class="callout q"><h4>In plain words</h4>Like polling 300 experts who each look at the data differently, then taking the average.</div>
+          <p class="note"><b>Best for:</b> Bumpy, non-linear patterns and sudden jumps.</p>
+        </div>
+
+        <div class="uc-card">
+          <div class="uc-head"><span class="uc-num">H</span>
+            <h3>HistGradientBoosting <span class="muted">· Boosted trees</span> <span class="badge badge-primary">strong all-rounder</span></h3></div>
+          <p class="uc-obj"><b>What it does:</b> Builds trees one after another, each fixing the last one's mistakes.</p>
+          <div class="callout q"><h4>In plain words</h4>Like a student who reviews every wrong answer and studies exactly that next.</div>
+          <p class="note"><b>Best for:</b> Complex patterns; fast on large data.</p>
+        </div>
+
+        <div class="uc-card">
+          <div class="uc-head"><span class="uc-num">X</span>
+            <h3>XGBoost <span class="muted">· Boosted trees</span> <span class="badge badge-primary">strong all-rounder</span></h3></div>
+          <p class="uc-obj"><b>What it does:</b> Same idea as the above, a very popular, highly-tuned version.</p>
+          <div class="callout q"><h4>In plain words</h4>The competition-winning cousin of gradient boosting.</div>
+          <p class="note"><b>Best for:</b> Complex tabular patterns.</p>
+        </div>
+
+        <div class="uc-card">
+          <div class="uc-head"><span class="uc-num">P</span>
+            <h3>Prophet <span class="muted">· Time-series (by Meta)</span> <span class="badge badge-primary">🏆 Gate total</span></h3></div>
+          <p class="uc-obj"><b>What it does:</b> Splits a series into trend + weekly/yearly seasonality + holidays.</p>
+          <div class="callout q"><h4>In plain words</h4>Like saying 'busier on Mondays, slower in summer' and projecting that forward.</div>
+          <p class="note"><b>Best for:</b> Seasonal, calendar-driven series — e.g. <b>gate traffic</b>.</p>
+        </div>
+
+        <div class="uc-card">
+          <div class="uc-head"><span class="uc-num">A</span>
+            <h3>ARIMA <span class="muted">· Classic statistics</span> <span class="badge badge-primary">baseline</span></h3></div>
+          <p class="uc-obj"><b>What it does:</b> Predicts the next value from recent values and recent errors.</p>
+          <div class="callout q"><h4>In plain words</h4>Like guessing tomorrow mostly from the last few days.</div>
+          <p class="note"><b>Best for:</b> Short-term, self-correlated series.</p>
+        </div>
+      <div class="callout q">
+        <h4>Why have six at all?</h4>
+        No single method wins everywhere. Smooth series love <b>Ridge</b>; seasonal series love
+        <b>Prophet</b>; spiky series love <b>trees</b>. Racing them means <b>each terminal automatically
+        gets the model that fits it best</b> — no manual guessing.
+      </div>
+    </section>
+
+    <!-- 4 SOURCE -->
+    <section id="source">
+      <h2>4 · What data (tables) we have</h2>
+      <p>It all starts from <b>one source</b>: 845,277 equipment-activity events (119 fields each,
+      32 terminals, ~2.5 months). From that raw stream we build four clean tables the models read:</p>
+      <table class="tbl"><thead><tr><th>Table</th><th>What it holds</th>
+      <th>Used for</th><th>Built from</th></tr></thead><tbody><tr><td class='fld'>yard_hourly</td><td>Hourly count of equipment sitting in each terminal's yard.</td><td>Yard inventory & congestion forecast</td><td class='why'>derived from gate-in/out + train arrivals/departures</td></tr><tr><td class='fld'>gate_flow_hourly</td><td>Hourly trucks gating in and out per terminal.</td><td>Gate throughput, inbound vs outbound flow</td><td class='why'>from gate-in / gate-out events</td></tr><tr><td class='fld'>dwell</td><td>How long each unit stayed in the yard (arrival → departure).</td><td>Dwell-time, slow-mover & idle detection</td><td class='why'>yardArrivalTime → yardDepartureTime</td></tr><tr><td class='fld'>equipment_quality</td><td>Hold and damage flags per terminal.</td><td>Bad-order / exception analytics</td><td class='why'>holdFlag, damageFlag, holdReason</td></tr></tbody></table>
+      <div class="callout tech">
+        <h4>Under the hood</h4>
+        Raw JSON → streamed into shards → summarized with DuckDB into these
+        <span class="mono">parquet</span> tables (the “gold” layer). The models never touch the 3.75&nbsp;GB
+        raw file — they read these tidy hourly summaries.
+      </div>
+    </section>
+
+    <!-- 5 TRAIN -->
+    <section id="train">
+      <h2>5 · How we train and pick a winner</h2>
+      <ol>
+        <li><b>Shape the data:</b> turn events into an hourly/daily time-series per terminal.</li>
+        <li><b>Add clues (features):</b> hour-of-day, day-of-week, and recent past values (“lags”).</li>
+        <li><b>Split fairly:</b> train on older data, test on a recent slice the model never saw.</li>
+        <li><b>Race the six:</b> each predicts the hidden slice; we score the error.</li>
+        <li><b>Crown the winner 🏆:</b> lowest error wins and is saved as a <span class="mono">.joblib</span> file.</li>
+        <li><b>Forecast:</b> the winner predicts the next 24h (yard) or next period (gate).</li>
+      </ol>
+      <div class="callout q">
+        <h4>In plain words</h4>
+        It's like studying past exams (training), then sitting a <b>mock exam</b> on questions you've
+        never seen (the test). Whoever scores best on the mock is trusted with the real one.
+      </div>
+      <p class="note">We did this for <b>every terminal × every metric</b> — 127 models in ~15 minutes
+      on a laptop CPU. The “Load &amp; run the real .joblib” button proves each one is a genuine saved
+      model, not a hardcoded number.</p>
+    </section>
+
+    <!-- 6 GATE -->
+    <section id="gate">
+      <h2>6 · Why Gate accuracy looks “low” (and what's really going on)</h2>
+      <div class="grid">
+        <div class="kpi"><div class="n">1,739</div><div class="l">Yard training points (hourly, ~72 days)</div></div>
+        <div class="kpi"><div class="n">67</div><div class="l">Gate training points (daily, ~2.5 months)</div></div>
+        <div class="kpi"><div class="n">+24h</div><div class="l">Yard horizon (easy)</div></div>
+        <div class="kpi"><div class="n">+14 days</div><div class="l">Gate horizon (hard)</div></div>
+      </div>
+      <p>Two honest reasons Gate is weaker:</p>
+      <ul>
+        <li><b>Far less data:</b> 67 points vs 1,739. Hard to learn a pattern from so few.</li>
+        <li><b>Much longer horizon:</b> guessing 14 days ahead is far harder than 24 hours ahead.</li>
+      </ul>
+      <div class="callout warn">
+        <h4>The “outbound 41.8%” trap</h4>
+        Outbound numbers are <b>small and spiky</b> (159, 51…). MAPE divides the error by the actual
+        value — so a modest miss on a small number looks like a huge percentage.
+        <b>Low-volume series always look bad in MAPE even when the model is fine.</b> Judge them by
+        MAE (real units) instead.
+      </div>
+      <div class="callout q">
+        <h4>In plain words</h4>
+        Yard is like predicting the level of a big lake — slow and smooth, easy. Gate is like predicting
+        how many people walk through a door on a random day two weeks from now — noisy and hard,
+        especially with only a couple months of history.
+      </div>
+    </section>
+
+    <!-- 7 MORE DATA -->
+    <section id="moredata">
+      <h2>7 · What MORE data would help (and how much)</h2>
+      <p>More data is the single biggest lever — especially for gate &amp; flows.</p>
+      <table class="tbl"><thead><tr><th>Data we could add</th><th>Today</th>
+      <th>Why it helps</th><th>Impact</th></tr></thead><tbody><tr><td class='fld'>More history (1+ year)</td><td>Only ~2.5 months today.</td><td>Lets models learn weekly &amp; seasonal cycles. <b>Biggest single win, especially for gate.</b></td><td><span class="badge badge-primary">high</span></td></tr><tr><td class='fld'>Train schedules / ETAs</td><td>Not in current feed.</td><td>Arrivals drive yard surges — huge for congestion timing.</td><td><span class="badge badge-primary">high</span></td></tr><tr><td class='fld'>Booking / reservation volumes</td><td>Partial today.</td><td>Forward demand signal for railcars &amp; empties.</td><td><span class="badge badge-primary">high</span></td></tr><tr><td class='fld'>Calendar &amp; holidays</td><td>Derivable.</td><td>Explains predictable busy/quiet days for gate.</td><td><span class="badge badge-future">medium</span></td></tr><tr><td class='fld'>Weather</td><td>External.</td><td>Storms shift truck arrivals &amp; delays.</td><td><span class="badge badge-future">medium</span></td></tr><tr><td class='fld'>Chassis pool / availability feed</td><td>Partial.</td><td>Enables chassis shortage &amp; turnaround prediction.</td><td><span class="badge badge-future">medium</span></td></tr><tr><td class='fld'>Labor / shift rosters</td><td>External.</td><td>Connects forecasts to staffing decisions.</td><td><span class="pill">low</span></td></tr></tbody></table>
+      <div class="callout q">
+        <h4>If you only do one thing</h4>
+        Get <b>1+ year of history</b> and add <b>train schedules / ETAs</b>. Those two unlock seasonal
+        patterns and explain the surges that drive both yard and gate.
+      </div>
+    </section>
+
+    <!-- 8 OTHER ALGORITHMS -->
+    <section id="otheralgo">
+      <h2>8 · Other algorithms we could add to the race</h2>
+      <p>The current six cover the main families. With more data, these are worth entering:</p>
+      <table class="tbl"><thead><tr><th>Algorithm</th><th>What it adds</th>
+      <th>Effort</th></tr></thead><tbody><tr><td class='fld'>LightGBM / CatBoost</td><td>Faster, often more accurate boosted trees (CatBoost handles categories natively).</td><td class='why'>easy add</td></tr><tr><td class='fld'>SARIMA / SARIMAX</td><td>ARIMA with seasonality + external drivers (e.g. train ETAs).</td><td class='why'>easy add</td></tr><tr><td class='fld'>Exponential Smoothing (ETS)</td><td>Lightweight, strong baseline for trend + seasonality.</td><td class='why'>easy add</td></tr><tr><td class='fld'>LSTM / GRU (neural nets)</td><td>Deep nets for long sequences — needs lots of data &amp; GPU.</td><td class='why'>needs 1yr+</td></tr><tr><td class='fld'>Temporal Fusion Transformer</td><td>State-of-the-art deep forecaster with feature attention.</td><td class='why'>needs 1yr+ / GPU</td></tr><tr><td class='fld'>Ensembling / stacking</td><td>Blend several winners — often beats any single model.</td><td class='why'>next step</td></tr></tbody></table>
+      <div class="callout tech">
+        <h4>Under the hood</h4>
+        <b>Easy adds</b> (LightGBM, CatBoost, SARIMA, ETS) plug straight into the existing race today.
+        <b>Deep-learning</b> (LSTM, Transformers) only pays off with a year+ of data and ideally a GPU —
+        otherwise it overfits and underperforms the simple models you already have. <b>Stacking</b>
+        (blending winners) is usually the smartest next gain.
+      </div>
+    </section>
+
+    <!-- 9 PROD -->
+    <section id="prod">
+      <h2>9 · If I add 1 year of data — is it production-ready?</h2>
+      <table class="tbl">
+        <thead><tr><th>Metric</th><th>Today</th><th>With 1 year</th></tr></thead>
+        <tbody>
+          <tr><td class="fld">Yard inventory</td><td>Production-grade (99.9%)</td><td>Rock solid</td></tr>
+          <tr><td class="fld">Gate total</td><td>Demo (≈80%)</td><td>Much better — learns weekly/seasonal cycles</td></tr>
+          <tr><td class="fld">Inbound / Outbound</td><td>Noisy (low volume)</td><td>Better; report in MAE</td></tr>
+        </tbody>
+      </table>
+      <div class="callout warn">
+        <h4>1 year is necessary, but not the whole story</h4>
+        To be truly production-ready you also need: (1) the right <b>horizon</b> — forecast gate
+        <b>1–3 hours ahead</b> (the real business question), not 14 days; (2) a <b>retraining schedule</b>
+        as new data arrives; (3) <b>honest metrics</b> (MAE for low-volume flows); (4) <b>monitoring</b>
+        that alerts when error grows.
+      </div>
+      <div class="callout q">
+        <h4>Bottom line</h4>
+        Yard is ready now. Gate becomes production-grade with <b>1 year of data + a realistic short
+        horizon + a retrain loop</b> — and the biggest quick win is simply <b>asking gate the right
+        question</b> (next few hours, not next two weeks).
+      </div>
+    </section>
+
+    <!-- 10 HOW TO SEE -->
+    <section id="howsee">
+      <h2>10 · How to read the screen, quickly</h2>
+      <ul>
+        <li><b>Find the 🏆</b> on the leaderboard — that's the chosen model. Lower number = better.</li>
+        <li><b>Compare MAE and MAPE.</b> Both small → trust it. Small MAE but big MAPE → it's a
+            low-volume series, not a broken model.</li>
+        <li><b>Read “Forecast vs threshold.”</b> OVER = act now (prepare yard space / staffing).</li>
+        <li><b>Click “Load &amp; run the real .joblib.”</b> Confirms it's a genuine saved model, live.</li>
+      </ul>
+      <hr>
+      <p class="note">Companion to the problem/source overview. Same warm reading theme, no dark mode.
+      Generated May 31, 2026.</p>
+    </section>
+  </main>
+</div>
+
+<script>
+const links=[...document.querySelectorAll('.nav-link')];
+const map=new Map(links.map(a=>[a.dataset.target,a]));
+const obs=new IntersectionObserver((es)=>{es.forEach(e=>{if(e.isIntersecting){
+  links.forEach(l=>l.classList.remove('active'));
+  const a=map.get(e.target.id); if(a)a.classList.add('active');}});},
+  {rootMargin:'-10% 0px -75% 0px',threshold:0});
+document.querySelectorAll('section').forEach(s=>obs.observe(s));
+</script>
+</body></html>
